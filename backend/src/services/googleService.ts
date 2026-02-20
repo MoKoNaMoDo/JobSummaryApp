@@ -162,7 +162,7 @@ export class GoogleService {
                     range: `${sheetName}!A1:H1`,
                     valueInputOption,
                     requestBody: {
-                        values: [['Date', 'Task Name', 'Assignee', 'Status', 'Description', 'Cost', 'Image', 'Last Updated']]
+                        values: [['วันที่', 'ชื่องาน', 'ผู้รับมอบหมาย', 'สถานะ', 'รายละเอียด', 'ค่าใช้จ่าย', 'รูปภาพ', 'อัปเดตล่าสุด']]
                     }
                 });
             }
@@ -356,10 +356,13 @@ export class GoogleService {
             // 2. Delete from Drive
             if (imageUrl && imageUrl.includes('drive.google.com')) {
                 try {
-                    const fileIdMatch = imageUrl.match(/id=([^&]+)/);
-                    if (fileIdMatch && fileIdMatch[1]) {
-                        await drive.files.delete({ fileId: fileIdMatch[1] });
-                        console.log(`Deleted file ${fileIdMatch[1]} from Drive`);
+                    // Match ?id=ID or /d/ID/view
+                    const fileIdMatch = imageUrl.match(/[?&]id=([^&]+)|v?[e]?/)?.[1] || imageUrl.match(/\/d\/([^/]+)/)?.[1] || imageUrl.match(/id=([^&]+)/)?.[1];
+                    if (fileIdMatch) {
+                        await drive.files.delete({ fileId: fileIdMatch });
+                        console.log(`Deleted file ${fileIdMatch} from Drive`);
+                    } else {
+                        console.log('Could not extract file ID from URL:', imageUrl);
                     }
                 } catch (driveError) {
                     console.error('Error deleting file from Drive:', driveError);

@@ -14,7 +14,7 @@ export const getJobs = async (req: Request, res: Response) => {
 
 export const submitJob = async (req: Request, res: Response) => {
     try {
-        const { note, assignee, status } = req.body; // assignee and status might come from frontend now
+        const { note, assignee, status, taskName: userTaskName } = req.body; // assignee, status, taskName might come from frontend now
         const file = req.file;
 
         if (!note && !file) {
@@ -36,19 +36,20 @@ export const submitJob = async (req: Request, res: Response) => {
         if (file) {
             console.log("Uploading Image...");
             // Use taskName or category for file context
-            imageUrl = await GoogleService.uploadSlip(file, analysis.taskName || analysis.category || "Job", analysis.date, "Jobs");
+            imageUrl = await GoogleService.uploadSlip(file, userTaskName || analysis.taskName || analysis.category || "Job", analysis.date, "Jobs");
         }
 
         // 3. Save to Google Sheets (New Schema)
         console.log("Saving to Sheets...");
 
-        // Use user-provided assignee/status if available, otherwise fallback to AI/Default
+        // Use user-provided values if available, otherwise fallback to AI/Default
         const finalAssignee = assignee || "Unassigned";
         const finalStatus = status || analysis.status || "Pending";
+        const finalTaskName = userTaskName || analysis.taskName || "Untitled Task";
 
         await GoogleService.appendToSheet({
             date: analysis.date || new Date().toISOString().split('T')[0],
-            taskName: analysis.taskName || "Untitled Task",
+            taskName: finalTaskName,
             assignee: finalAssignee,
             status: finalStatus,
             description: analysis.description || note,

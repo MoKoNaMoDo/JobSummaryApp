@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, PlusCircle, Settings, Sparkles } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Settings } from "lucide-react";
 
 import { useLanguage } from "@/components/LanguageProvider";
 

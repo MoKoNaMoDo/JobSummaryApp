@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 type Language = 'en' | 'th';
 
@@ -15,13 +15,13 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 import { translations } from '@/lib/translations';
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-    const [language, setLanguage] = useState<Language>('en');
-
-    // Load from local storage
-    useEffect(() => {
-        const saved = localStorage.getItem('language') as Language;
-        if (saved) setLanguage(saved);
-    }, []);
+    const [language, setLanguage] = useState<Language>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('language') as Language;
+            if (saved) return saved;
+        }
+        return 'en';
+    });
 
     const changeLanguage = (lang: Language) => {
         setLanguage(lang);
@@ -31,11 +31,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const t = (key: string) => {
         // Basic nested key support "page.title" -> translations[lang][page][title]
         const keys = key.split('.');
-        let value: any = translations[language];
+        let value: Record<string, unknown> | string | undefined = translations[language] as Record<string, unknown>;
 
         for (const k of keys) {
             if (value && typeof value === 'object') {
-                value = value[k];
+                value = (value as Record<string, unknown>)[k] as Record<string, unknown> | string | undefined;
             } else {
                 return key; // Fallback
             }

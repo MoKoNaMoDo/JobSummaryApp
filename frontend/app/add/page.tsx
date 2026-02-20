@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Upload, X, Loader2, User, Activity } from "lucide-react";
+import { Sparkles, Upload, X, Loader2, User, Activity, FileText } from "lucide-react";
 import { toast } from "sonner"; // Shadcn Sonner
 import { jobService } from "@/lib/api";
 
@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 
 // Schema
 const formSchema = z.object({
+    taskName: z.string().optional(),
     note: z.string().min(5, {
         message: "Note must be at least 5 characters.",
     }),
@@ -48,11 +49,11 @@ export default function AddJobPage() {
     const [preview, setPreview] = useState<string | null>(null);
     const [isanalyzing, setIsAnalyzing] = useState(false);
     const [users, setUsers] = useState<string[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(true);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
+            taskName: "",
             note: "",
             assignee: "",
             status: "Pending",
@@ -68,8 +69,6 @@ export default function AddJobPage() {
                 }
             } catch (e) {
                 console.error("Failed to load users", e);
-            } finally {
-                setLoadingUsers(false);
             }
         };
         fetchUsers();
@@ -100,6 +99,7 @@ export default function AddJobPage() {
 
         try {
             const formData = new FormData();
+            if (values.taskName) formData.append("taskName", values.taskName);
             formData.append("note", values.note);
             if (values.assignee) formData.append("assignee", values.assignee);
             if (values.status) formData.append("status", values.status);
@@ -115,16 +115,17 @@ export default function AddJobPage() {
                 description: `Analyzed as: ${result.data.category} - ${result.data.taskName || 'Task'}`,
             });
             form.reset({
+                taskName: "",
                 note: "",
                 assignee: values.assignee,
                 status: "Pending"
             });
             clearFile();
-        } catch (error: any) {
+        } catch (error: unknown) {
             setIsAnalyzing(false);
             console.error(error);
             toast.error(t('addJob.toastError'), {
-                description: error.response?.data?.message || "Something went wrong.",
+                description: (error as Record<string, Record<string, Record<string, string>>>)?.response?.data?.message || "Something went wrong.",
             });
         }
     }
@@ -182,6 +183,7 @@ export default function AddJobPage() {
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         className="relative rounded-xl overflow-hidden aspect-video group"
                                     >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
                                             src={preview}
                                             alt="Preview"
@@ -203,6 +205,27 @@ export default function AddJobPage() {
                             </AnimatePresence>
                         </div>
 
+                        {/* Task Name Input */}
+                        <FormField
+                            control={form.control}
+                            name="taskName"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2">
+                                        <FileText className="w-4 h-4" /> {t('addJob.taskName')}
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder={t('addJob.placeholderTaskName')}
+                                            className="bg-white/5 border-white/10 text-white placeholder:text-muted-foreground"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
                         <div className="grid grid-cols-2 gap-4">
                             {/* Assignee Selection */}
                             <FormField
@@ -213,27 +236,25 @@ export default function AddJobPage() {
                                         <FormLabel className="flex items-center gap-2">
                                             <User className="w-4 h-4" /> {t('addJob.assignee')}
                                         </FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger className="bg-white/5 border-white/10">
-                                                    <SelectValue placeholder={t('addJob.selectUser')} />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {users.length > 0 ? (
-                                                    users.map((user) => (
-                                                        <SelectItem key={user} value={user}>
-                                                            {user}
-                                                        </SelectItem>
-                                                    ))
-                                                ) : (
-                                                    <SelectItem value="Unassigned" disabled>
-                                                        No users found (Check Settings)
-                                                    </SelectItem>
-                                                )}
-                                                <SelectItem value="Unassigned">Unassigned</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <FormControl>
+                                            <div className="relative">
+                                                <Input
+                                                    {...field}
+                                                    list="assignee-list"
+                                                    placeholder={t('addJob.selectUser') || "Type or select user"}
+                                                    className="bg-white/5 border-white/10 text-white placeholder:text-muted-foreground w-full"
+                                                />
+                                                <datalist id="assignee-list">
+                                                    <option value="Unassigned" />
+                                                    {users.map((user) => (
+                                                        <option key={user} value={user} />
+                                                    ))}
+                                                </datalist>
+                                                <p className="text-xs text-muted-foreground mt-2">
+                                                    You can type a new name or select from the dropdown.
+                                                </p>
+                                            </div>
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
