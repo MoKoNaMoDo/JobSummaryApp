@@ -1,23 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Upload, X, Loader2, User, Activity, FileText } from "lucide-react";
-import { toast } from "sonner"; // Shadcn Sonner
+import { Sparkles, Upload, X, Loader2, User, Activity, FileText, Plus, Trash2, Camera, Send } from "lucide-react";
+import { toast } from "sonner";
 import { jobService } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
 import {
     Select,
     SelectContent,
@@ -26,39 +15,40 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
-// Schema
-const formSchema = z.object({
-    taskName: z.string().optional(),
-    note: z.string().min(5, {
-        message: "Note must be at least 5 characters.",
-    }),
-    assignee: z.string().optional(),
-    status: z.enum(["Pending", "In Progress", "Completed"]),
-});
-
-type FormValues = z.infer<typeof formSchema>;
 
 import { useLanguage } from "@/components/LanguageProvider";
 
+// Single job entry type
+interface JobEntry {
+    id: string;
+    taskName: string;
+    note: string;
+    assignee: string;
+    status: "Pending" | "In Progress" | "Completed";
+    file: File | null;
+    preview: string | null;
+    isSubmitting: boolean;
+    isSubmitted: boolean;
+}
+
+const createEmptyEntry = (): JobEntry => ({
+    id: crypto.randomUUID(),
+    taskName: "",
+    note: "",
+    assignee: "",
+    status: "Pending",
+    file: null,
+    preview: null,
+    isSubmitting: false,
+    isSubmitted: false,
+});
+
 export default function AddJobPage() {
     const { t } = useLanguage();
-    const [file, setFile] = useState<File | null>(null);
-    const [preview, setPreview] = useState<string | null>(null);
-    const [isanalyzing, setIsAnalyzing] = useState(false);
+    const [entries, setEntries] = useState<JobEntry[]>([createEmptyEntry()]);
     const [users, setUsers] = useState<string[]>([]);
-
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            taskName: "",
-            note: "",
-            assignee: "",
-            status: "Pending",
-        },
-    });
+    const [isSubmittingAll, setIsSubmittingAll] = useState(false);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -74,64 +64,91 @@ export default function AddJobPage() {
         fetchUsers();
     }, []);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const updateEntry = useCallback((id: string, updates: Partial<JobEntry>) => {
+        setEntries(prev => prev.map(entry =>
+            entry.id === id ? { ...entry, ...updates } : entry
+        ));
+    }, []);
+
+    const addEntry = () => {
+        setEntries(prev => [...prev, createEmptyEntry()]);
+    };
+
+    const removeEntry = (id: string) => {
+        if (entries.length <= 1) return;
+        setEntries(prev => prev.filter(e => e.id !== id));
+    };
+
+    const handleFileChange = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
-            setFile(selectedFile);
             const objectUrl = URL.createObjectURL(selectedFile);
-            setPreview(objectUrl);
+            updateEntry(id, { file: selectedFile, preview: objectUrl });
         }
     };
 
-    const clearFile = () => {
-        setFile(null);
-        setPreview(null);
+    const clearFile = (id: string) => {
+        updateEntry(id, { file: null, preview: null });
     };
 
-
-    async function onSubmit(values: FormValues) {
-        if (!file && values.note.length < 5) {
+    const submitEntry = async (entry: JobEntry): Promise<boolean> => {
+        if (!entry.file && entry.note.length < 5) {
             toast.error(t('addJob.validationImageOrNote'));
-            return;
+            return false;
         }
 
-        setIsAnalyzing(true);
+        updateEntry(entry.id, { isSubmitting: true });
 
         try {
             const formData = new FormData();
-            if (values.taskName) formData.append("taskName", values.taskName);
-            formData.append("note", values.note);
-            if (values.assignee) formData.append("assignee", values.assignee);
-            if (values.status) formData.append("status", values.status);
+            if (entry.taskName) formData.append("taskName", entry.taskName);
+            formData.append("note", entry.note);
+            if (entry.assignee) formData.append("assignee", entry.assignee);
+            if (entry.status) formData.append("status", entry.status);
+            if (entry.file) formData.append("image", entry.file);
 
-            if (file) {
-                formData.append("image", file);
-            }
-
-            const result = await jobService.submitJob(formData);
-
-            setIsAnalyzing(false);
-            toast.success(t('addJob.toastSuccess'), {
-                description: `Analyzed as: ${result.data.category} - ${result.data.taskName || 'Task'}`,
-            });
-            form.reset({
-                taskName: "",
-                note: "",
-                assignee: values.assignee,
-                status: "Pending"
-            });
-            clearFile();
+            await jobService.submitJob(formData);
+            updateEntry(entry.id, { isSubmitting: false, isSubmitted: true });
+            return true;
         } catch (error: unknown) {
-            setIsAnalyzing(false);
+            updateEntry(entry.id, { isSubmitting: false });
             console.error(error);
             toast.error(t('addJob.toastError'), {
                 description: (error as Record<string, Record<string, Record<string, string>>>)?.response?.data?.message || "Something went wrong.",
             });
+            return false;
         }
-    }
+    };
+
+    const submitAll = async () => {
+        const pendingEntries = entries.filter(e => !e.isSubmitted);
+        if (pendingEntries.length === 0) return;
+
+        setIsSubmittingAll(true);
+        let successCount = 0;
+
+        for (const entry of pendingEntries) {
+            const ok = await submitEntry(entry);
+            if (ok) successCount++;
+        }
+
+        setIsSubmittingAll(false);
+
+        if (successCount > 0) {
+            toast.success(`${successCount} ${t('addJob.jobsSaved')}`);
+            // Remove submitted entries and add a fresh one
+            setEntries(prev => {
+                const remaining = prev.filter(e => !e.isSubmitted);
+                return remaining.length === 0 ? [createEmptyEntry()] : remaining;
+            });
+        }
+    };
+
+    const pendingCount = entries.filter(e => !e.isSubmitted).length;
 
     return (
-        <div className="max-w-2xl mx-auto space-y-8 pb-20">
+        <div className="max-w-2xl mx-auto space-y-6 pb-24">
+            {/* Header */}
             <motion.div
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -140,194 +157,220 @@ export default function AddJobPage() {
                 <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
                     {t('addJob.title')}
                 </h1>
-                <p className="text-muted-foreground">
+                <p className="text-slate-400 text-sm">
                     {t('addJob.subtitle')}
                 </p>
             </motion.div>
 
-            <Card className="p-6 border-white/5 bg-white/5 backdrop-blur-xl">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-
-                        {/* Image Upload Area */}
-                        <div className="space-y-2">
-                            <FormLabel>{t('addJob.imageEvidence')}</FormLabel>
-                            <AnimatePresence mode="wait">
-                                {!preview ? (
-                                    <motion.div
-                                        key="upload-zone"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:bg-white/5 transition-colors cursor-pointer relative"
-                                    >
-                                        <Input
-                                            type="file"
-                                            accept="image/*"
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                            onChange={handleFileChange}
-                                        />
-                                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                            <div className="p-3 bg-white/5 rounded-full">
-                                                <Upload className="w-6 h-6" />
-                                            </div>
-                                            <p className="text-sm font-medium">{t('addJob.clickToUpload')}</p>
-                                            <p className="text-xs text-muted-foreground/50">{t('addJob.fileType')}</p>
-                                        </div>
-                                    </motion.div>
-                                ) : (
-                                    <motion.div
-                                        key="preview-zone"
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        className="relative rounded-xl overflow-hidden aspect-video group"
-                                    >
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img
-                                            src={preview}
-                                            alt="Preview"
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <Button
-                                                variant="destructive"
-                                                size="icon"
-                                                onClick={clearFile}
-                                                type="button"
-                                                className="rounded-full"
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </motion.div>
+            {/* Entry Cards */}
+            <AnimatePresence mode="popLayout">
+                {entries.map((entry, index) => (
+                    <motion.div
+                        key={entry.id}
+                        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                        transition={{ duration: 0.25 }}
+                        className={`relative rounded-2xl border transition-all ${entry.isSubmitted
+                            ? "border-emerald-500/30 bg-emerald-500/5"
+                            : entry.isSubmitting
+                                ? "border-blue-500/30 bg-blue-500/5"
+                                : "border-slate-700/50 bg-slate-800/40"
+                            } backdrop-blur-sm overflow-hidden`}
+                    >
+                        {/* Card Header */}
+                        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700/30">
+                            <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold flex items-center justify-center">
+                                    {index + 1}
+                                </span>
+                                <span className="text-sm font-medium text-slate-300">
+                                    {entry.taskName || t('dashboard.untitled')}
+                                </span>
+                                {entry.isSubmitted && (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium">✓ {t('addJob.saved')}</span>
                                 )}
-                            </AnimatePresence>
+                            </div>
+                            {entries.length > 1 && !entry.isSubmitted && (
+                                <button
+                                    onClick={() => removeEntry(entry.id)}
+                                    className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
 
-                        {/* Task Name Input */}
-                        <FormField
-                            control={form.control}
-                            name="taskName"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="flex items-center gap-2">
-                                        <FileText className="w-4 h-4" /> {t('addJob.taskName')}
-                                    </FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder={t('addJob.placeholderTaskName')}
-                                            className="bg-white/5 border-white/10 text-white placeholder:text-muted-foreground"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <div className="grid grid-cols-2 gap-4">
-                            {/* Assignee Selection */}
-                            <FormField
-                                control={form.control}
-                                name="assignee"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-2">
-                                            <User className="w-4 h-4" /> {t('addJob.assignee')}
-                                        </FormLabel>
-                                        <FormControl>
-                                            <div className="relative">
+                        {!entry.isSubmitted && (
+                            <div className="p-5 space-y-4">
+                                {/* Image Upload */}
+                                <div>
+                                    <AnimatePresence mode="wait">
+                                        {!entry.preview ? (
+                                            <motion.div
+                                                key="upload"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                className="border-2 border-dashed border-slate-600/50 rounded-xl p-4 text-center hover:bg-slate-700/20 hover:border-indigo-500/30 transition-all cursor-pointer relative"
+                                            >
                                                 <Input
-                                                    {...field}
-                                                    list="assignee-list"
-                                                    placeholder={t('addJob.selectUser') || "Type or select user"}
-                                                    className="bg-white/5 border-white/10 text-white placeholder:text-muted-foreground w-full"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                    onChange={(e) => handleFileChange(entry.id, e)}
                                                 />
-                                                <datalist id="assignee-list">
-                                                    <option value="Unassigned" />
-                                                    {users.map((user) => (
-                                                        <option key={user} value={user} />
-                                                    ))}
-                                                </datalist>
-                                                <p className="text-xs text-muted-foreground mt-2">
-                                                    You can type a new name or select from the dropdown.
-                                                </p>
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                                <div className="flex items-center justify-center gap-3 text-slate-400">
+                                                    <Camera className="w-5 h-5" />
+                                                    <span className="text-sm">{t('addJob.clickToUpload')}</span>
+                                                </div>
+                                            </motion.div>
+                                        ) : (
+                                            <motion.div
+                                                key="preview"
+                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.95 }}
+                                                className="relative rounded-xl overflow-hidden h-36 group"
+                                            >
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img
+                                                    src={entry.preview}
+                                                    alt="Preview"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="icon"
+                                                        onClick={() => clearFile(entry.id)}
+                                                        type="button"
+                                                        className="rounded-full w-8 h-8"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
 
-                            {/* Status Selection */}
-                            <FormField
-                                control={form.control}
-                                name="status"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-2">
-                                            <Activity className="w-4 h-4" /> {t('addJob.status')}
-                                        </FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger className="bg-white/5 border-white/10">
-                                                    <SelectValue placeholder={t('addJob.selectStatus')} />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
+                                {/* Task Name */}
+                                <div className="space-y-1.5">
+                                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                                        <FileText className="w-3.5 h-3.5" /> {t('addJob.taskName')}
+                                    </label>
+                                    <Input
+                                        placeholder={t('addJob.placeholderTaskName')}
+                                        value={entry.taskName}
+                                        onChange={(e) => updateEntry(entry.id, { taskName: e.target.value })}
+                                        className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-500 rounded-xl h-10"
+                                    />
+                                </div>
+
+                                {/* Assignee + Status Row */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                                            <User className="w-3.5 h-3.5" /> {t('addJob.assignee')}
+                                        </label>
+                                        <div className="relative">
+                                            <Input
+                                                list={`assignee-list-${entry.id}`}
+                                                placeholder={t('addJob.selectUser')}
+                                                value={entry.assignee}
+                                                onChange={(e) => updateEntry(entry.id, { assignee: e.target.value })}
+                                                className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-500 rounded-xl h-10"
+                                            />
+                                            <datalist id={`assignee-list-${entry.id}`}>
+                                                {users.map((user) => (
+                                                    <option key={user} value={user} />
+                                                ))}
+                                            </datalist>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                                            <Activity className="w-3.5 h-3.5" /> {t('addJob.status')}
+                                        </label>
+                                        <Select
+                                            value={entry.status}
+                                            onValueChange={(v) => updateEntry(entry.id, { status: v as JobEntry["status"] })}
+                                        >
+                                            <SelectTrigger className="bg-slate-800/60 border-slate-600/50 text-white rounded-xl h-10">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-slate-800 border-slate-700 text-white rounded-xl">
                                                 <SelectItem value="Pending">{t('status.Pending')}</SelectItem>
                                                 <SelectItem value="In Progress">{t('status.In Progress')}</SelectItem>
                                                 <SelectItem value="Completed">{t('status.Completed')}</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                                    </div>
+                                </div>
 
-                        {/* Note Input */}
-                        <FormField
-                            control={form.control}
-                            name="note"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{t('addJob.workDescription')}</FormLabel>
-                                    <FormControl>
-                                        <Textarea
-                                            placeholder={t('addJob.placeholderDescription')}
-                                            className="min-h-[120px] bg-white/5 border-white/10 focus:border-primary/50 resize-none text-lg"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                                {/* Note */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-slate-400">{t('addJob.workDescription')}</label>
+                                    <Textarea
+                                        placeholder={t('addJob.placeholderDescription')}
+                                        value={entry.note}
+                                        onChange={(e) => updateEntry(entry.id, { note: e.target.value })}
+                                        className="min-h-[80px] bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-500 resize-none rounded-xl"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
-                        {/* Submit Button */}
-                        <Button
-                            type="submit"
-                            className="w-full h-12 text-lg font-medium bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 hover:from-blue-600 hover:to-violet-600 shadow-lg shadow-indigo-500/25 transition-all duration-300"
-                            disabled={isanalyzing}
-                        >
-                            {isanalyzing ? (
-                                <>
-                                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                    {t('addJob.analyzingButton')}
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="mr-2 h-5 w-5" />
-                                    {t('addJob.analyzeButton')}
-                                </>
-                            )}
-                        </Button>
+                        {/* Submitting overlay */}
+                        {entry.isSubmitting && (
+                            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center rounded-2xl z-10">
+                                <div className="flex items-center gap-3 text-blue-300">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span className="text-sm font-medium">{t('addJob.analyzingButton')}</span>
+                                </div>
+                            </div>
+                        )}
+                    </motion.div>
+                ))}
+            </AnimatePresence>
 
-                    </form>
-                </Form>
-            </Card>
+            {/* Add More Button */}
+            <motion.button
+                onClick={addEntry}
+                className="w-full py-3 border-2 border-dashed border-slate-600/40 rounded-2xl text-slate-400 hover:text-indigo-300 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all flex items-center justify-center gap-2 text-sm font-medium"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+            >
+                <Plus className="w-4 h-4" />
+                {t('addJob.addAnother') || 'Add another entry'}
+            </motion.button>
+
+            {/* Sticky Submit Bar */}
+            <div className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-xl border-t border-slate-700/50 z-50">
+                <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+                    <div className="text-sm text-slate-400">
+                        <span className="text-white font-semibold">{pendingCount}</span> {pendingCount === 1 ? t('addJob.entry') : t('addJob.entries')} {t('addJob.pendingLabel')}
+                    </div>
+                    <Button
+                        onClick={submitAll}
+                        disabled={isSubmittingAll || pendingCount === 0}
+                        className="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white rounded-xl px-6 h-10 shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isSubmittingAll ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                {t('addJob.analyzingButton')}
+                            </>
+                        ) : (
+                            <>
+                                <Send className="mr-2 h-4 w-4" />
+                                {t('addJob.analyzeButton')} ({pendingCount})
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </div>
         </div>
     );
 }
