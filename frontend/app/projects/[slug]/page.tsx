@@ -59,7 +59,10 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const { t } = useLanguage();
 
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
     const fetchData = async () => {
       try {
         const [jobsData, configData] = await Promise.all([
@@ -202,6 +205,30 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
   );
 
   // --- Render ---
+
+  if (!mounted) {
+    return (
+      <div className="space-y-6 pb-10">
+        <header className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-xl bg-white/5" />
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48 bg-white/5" />
+              <Skeleton className="h-4 w-32 bg-white/5" />
+            </div>
+          </div>
+        </header>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="space-y-3">
+              <Skeleton className="h-8 w-32 rounded-lg bg-white/5" />
+              <Skeleton className="h-32 rounded-xl bg-white/5" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-10">

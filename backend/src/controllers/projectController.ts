@@ -4,7 +4,7 @@ import { GoogleService } from '../services/googleService';
 
 export const getProjects = async (_req: Request, res: Response) => {
     try {
-        const projects = ProjectService.getAll();
+        const projects = await ProjectService.getAll();
 
         // Enrich with job stats for each project
         const enriched = await Promise.all(projects.map(async (p) => {
@@ -33,7 +33,7 @@ export const createProject = async (req: Request, res: Response) => {
             return;
         }
 
-        const project = ProjectService.create(name.trim(), color);
+        const project = await ProjectService.create(name.trim(), color);
         res.json({ status: 'success', data: project });
     } catch (error: any) {
         res.status(500).json({ status: 'error', message: error.message });
@@ -45,7 +45,7 @@ export const updateProject = async (req: Request, res: Response) => {
         const id = String(req.params.id);
         const { name, color } = req.body;
 
-        const updated = ProjectService.update(id, { name, color });
+        const updated = await ProjectService.update(id, { name, color });
         if (!updated) {
             res.status(404).json({ status: 'error', message: 'Project not found' });
             return;
@@ -60,7 +60,7 @@ export const updateProject = async (req: Request, res: Response) => {
 export const deleteProject = async (req: Request, res: Response) => {
     try {
         const id = String(req.params.id);
-        const success = ProjectService.delete(id);
+        const success = await ProjectService.delete(id);
         if (!success) {
             res.status(404).json({ status: 'error', message: 'Project not found' });
             return;

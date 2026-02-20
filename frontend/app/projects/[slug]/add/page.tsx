@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { jobService } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
     Select,
     SelectContent,
@@ -52,7 +53,10 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
     const [users, setUsers] = useState<string[]>([]);
     const [isSubmittingAll, setIsSubmittingAll] = useState(false);
 
+    const [mounted, setMounted] = useState(false);
+
     useEffect(() => {
+        setMounted(true);
         const fetchUsers = async () => {
             try {
                 const res = await jobService.getConfig();
@@ -148,6 +152,20 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
     };
 
     const pendingCount = entries.filter(e => !e.isSubmitted).length;
+
+    if (!mounted) {
+        return (
+            <div className="max-w-2xl mx-auto space-y-6 pb-24">
+                <header className="text-center space-y-2">
+                    <Skeleton className="h-10 w-48 mx-auto bg-white/5" />
+                    <Skeleton className="h-4 w-64 mx-auto bg-white/5" />
+                </header>
+                <div className="space-y-6">
+                    <Skeleton className="h-64 rounded-2xl bg-white/5" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-2xl mx-auto space-y-6 pb-24">

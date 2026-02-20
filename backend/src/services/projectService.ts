@@ -1,8 +1,6 @@
-import fs from 'fs';
-import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-
-const PROJECTS_PATH = path.join(__dirname, '../../data/projects.json');
+import { GoogleService } from './googleService';
+import { ConfigService } from './configService';
 
 export interface Project {
     id: string;
@@ -12,11 +10,7 @@ export interface Project {
     color: string;
 }
 
-// Ensure data directory exists
-try {
-    const dir = path.dirname(PROJECTS_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-} catch { /* read-only env */ }
+const TAB_NAME = '_SYS_PROJECTS';
 
 function slugify(name: string): string {
     return name
@@ -35,29 +29,49 @@ const PROJECT_COLORS = [
 ];
 
 export const ProjectService = {
-    getAll(): Project[] {
+    async getAll(): Promise<Project[]> {
         try {
-            if (fs.existsSync(PROJECTS_PATH)) {
-                return JSON.parse(fs.readFileSync(PROJECTS_PATH, 'utf-8'));
-            }
+            const spreadsheetId = ConfigService.get('googleSheetIdJobs');
+            if (!spreadsheetId) return [];
+
+            const rows = await GoogleService.readTab(spreadsheetId, TAB_NAME);
+            if (rows.length < 2) return []; // Header only or empty
+
+            // First row is header: id, name, slug, createdAt, color
+            return rows.slice(1).map(row => ({
+                id: row[0],
+                name: row[1],
+                slug: row[2],
+                createdAt: row[3],
+                color: row[4]
+            }));
         } catch (e) {
-            console.error("Error reading projects:", e);
+            console.error("Error reading projects from Sheets:", e);
+            return [];
         }
-        return [];
     },
 
-    save(projects: Project[]): boolean {
+    async save(projects: Project[]): Promise<boolean> {
         try {
-            fs.writeFileSync(PROJECTS_PATH, JSON.stringify(projects, null, 2));
+            const spreadsheetId = ConfigService.get('googleSheetIdJobs');
+            if (!spreadsheetId) return false;
+
+            const header = ['id', 'name', 'slug', 'createdAt', 'color'];
+            const rows = [
+                header,
+                ...projects.map(p => [p.id, p.name, p.slug, p.createdAt, p.color])
+            ];
+
+            await GoogleService.writeTab(spreadsheetId, TAB_NAME, rows);
             return true;
         } catch (e) {
-            console.error("Error saving projects:", e);
+            console.error("Error saving projects to Sheets:", e);
             return false;
         }
     },
 
-    create(name: string, color?: string): Project {
-        const projects = this.getAll();
+    async create(name: string, color?: string): Promise<Project> {
+        const projects = await this.getAll();
         let slug = slugify(name);
 
         // Ensure unique slug
@@ -76,30 +90,31 @@ export const ProjectService = {
         };
 
         projects.push(project);
-        this.save(projects);
+        await this.save(projects);
         return project;
     },
 
-    getBySlug(slug: string): Project | undefined {
-        return this.getAll().find(p => p.slug === slug);
+    async getBySlug(slug: string): Promise<Project | undefined> {
+        const projects = await this.getAll();
+        return projects.find(p => p.slug === slug);
     },
 
-    update(id: string, data: Partial<Pick<Project, 'name' | 'color'>>): Project | null {
-        const projects = this.getAll();
+    async update(id: string, data: Partial<Pick<Project, 'name' | 'color'>>): Promise<Project | null> {
+        const projects = await this.getAll();
         const idx = projects.findIndex(p => p.id === id);
         if (idx === -1) return null;
 
         if (data.name) projects[idx].name = data.name;
         if (data.color) projects[idx].color = data.color;
 
-        this.save(projects);
+        await this.save(projects);
         return projects[idx];
     },
 
-    delete(id: string): boolean {
-        const projects = this.getAll();
+    async delete(id: string): Promise<boolean> {
+        const projects = await this.getAll();
         const filtered = projects.filter(p => p.id !== id);
         if (filtered.length === projects.length) return false;
-        return this.save(filtered);
+        return await this.save(filtered);
     }
 };

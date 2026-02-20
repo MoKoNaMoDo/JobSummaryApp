@@ -28,6 +28,7 @@ export default function ProjectsHub() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const fetchProjects = async () => {
     try {
@@ -40,7 +41,10 @@ export default function ProjectsHub() {
     }
   };
 
-  useEffect(() => { fetchProjects(); }, []);
+  useEffect(() => {
+    setMounted(true);
+    fetchProjects();
+  }, []);
 
   const handleCreate = async (name: string, color: string) => {
     const project = await projectService.create(name, color);
@@ -62,6 +66,15 @@ export default function ProjectsHub() {
   const totalJobs = projects.reduce((s, p) => s + (p.stats?.total || 0), 0);
   const totalCompleted = projects.reduce((s, p) => s + (p.stats?.completed || 0), 0);
   const totalCost = projects.reduce((s, p) => s + (p.stats?.totalCost || 0), 0);
+
+  if (!mounted) return (
+    <div className="space-y-8 pb-10 opacity-0">
+      <header className="flex items-center justify-between gap-4">
+        <div className="h-10 w-48 bg-white/5 animate-pulse rounded-xl" />
+        <div className="h-12 w-32 bg-white/5 animate-pulse rounded-xl" />
+      </header>
+    </div>
+  );
 
   return (
     <div className="space-y-8 pb-10">

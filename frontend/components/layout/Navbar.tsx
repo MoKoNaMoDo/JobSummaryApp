@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,11 @@ const navItems = [
 export function Navbar() {
     const pathname = usePathname();
     const { t } = useLanguage();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Determine active state - project pages are under "/"
     const getIsActive = (href: string) => {
@@ -51,7 +57,7 @@ export function Navbar() {
 
                             <span className="relative z-10 flex items-center gap-2">
                                 <Icon className={cn("w-5 h-5", isActive && "text-white")} />
-                                {isActive && (
+                                {isActive && mounted && (
                                     <motion.span
                                         initial={{ opacity: 0, width: 0 }}
                                         animate={{ opacity: 1, width: "auto" }}

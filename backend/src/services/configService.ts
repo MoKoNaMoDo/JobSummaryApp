@@ -1,7 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-
-const CONFIG_PATH = path.join(__dirname, '../../data/config.json');
+import { GoogleService } from './googleService';
 
 export interface AppConfig {
     geminiApiKey?: string;
@@ -16,43 +13,85 @@ export interface AppConfig {
     googleAppsScriptUrl?: string; // Image Upload Proxy Endpoint
 }
 
-// Ensure data directory exists (Likely fails on Vercel/Read-only FS, but okay for local)
-try {
-    const dir = path.dirname(CONFIG_PATH);
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-} catch (err) {
-    console.warn("Could not create config directory (likely read-only env):", err);
-}
+const TAB_NAME = '_SYS_CONFIG';
+
+// Simple in-memory cache
+let configCache: AppConfig = {};
 
 export const ConfigService = {
-    getConfig: (): AppConfig => {
+    /**
+     * Initializes the config by loading from Google Sheets.
+     * Should be called on server start.
+     */
+    async load(): Promise<void> {
         try {
-            if (fs.existsSync(CONFIG_PATH)) {
-                const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-                return JSON.parse(raw);
+            // Priority: Master Spreadsheet ID from ENV
+            const spreadsheetId = process.env.GOOGLE_SHEET_ID_JOBS || process.env.GOOGLE_SHEET_ID;
+            if (!spreadsheetId) {
+                console.warn("No Google Sheet ID found in ENV for config load");
+                return;
             }
+
+            const rows = await GoogleService.readTab(spreadsheetId, TAB_NAME);
+            if (rows.length < 2) {
+                console.log("Config tab is empty or header-only");
+                return;
+            }
+
+            // Mapped from Key-Value rows (skip header)
+            const loadedConfig: any = {};
+            rows.slice(1).forEach(row => {
+                const [key, value] = row;
+                if (key) {
+                    try {
+                        // Parse arrays or objects (like 'users')
+                        loadedConfig[key] = (value?.startsWith('[') || value?.startsWith('{'))
+                            ? JSON.parse(value)
+                            : value;
+                    } catch {
+                        loadedConfig[key] = value;
+                    }
+                }
+            });
+
+            configCache = loadedConfig;
+            console.log("Config loaded from Google Sheets ✅");
         } catch (error) {
-            console.error("Error reading config:", error);
+            console.error("Failed to load config from Sheets:", error);
         }
-        return {};
     },
 
-    saveConfig: (newConfig: AppConfig): boolean => {
+    getConfig: (): AppConfig => {
+        return configCache;
+    },
+
+    async saveConfig(newConfig: AppConfig): Promise<boolean> {
         try {
-            fs.writeFileSync(CONFIG_PATH, JSON.stringify(newConfig, null, 2));
+            configCache = { ...configCache, ...newConfig };
+
+            const spreadsheetId = process.env.GOOGLE_SHEET_ID_JOBS || process.env.GOOGLE_SHEET_ID;
+            if (!spreadsheetId) return false;
+
+            const header = ['key', 'value'];
+            const rows = [
+                header,
+                ...Object.entries(configCache).map(([k, v]) => [
+                    k,
+                    typeof v === 'object' ? JSON.stringify(v) : String(v)
+                ])
+            ];
+
+            await GoogleService.writeTab(spreadsheetId, TAB_NAME, rows);
             return true;
         } catch (error) {
-            console.error("Error saving config:", error);
+            console.error("Error saving config to Sheets:", error);
             return false;
         }
     },
 
     get: (key: keyof AppConfig): any => {
-        const config = ConfigService.getConfig();
-        // Priority: Config File > Environment Variable
-        if (config[key]) return config[key];
+        // Priority: In-memory/Sheets cache > Environment Variable
+        if (configCache[key]) return configCache[key];
 
         // Map config keys to Env vars for fallback
         const envMap: Record<keyof AppConfig, string> = {

@@ -402,4 +402,69 @@ export class GoogleService {
         if (!sheet || !sheet.properties?.sheetId) throw new Error('Sheet not found');
         return sheet.properties.sheetId;
     }
+
+    // --- NEW: Generic Metadata Support ---
+
+    /**
+     * Reads all rows from a specific tab.
+     */
+    static async readTab(spreadsheetId: string, tabName: string): Promise<string[][]> {
+        try {
+            const sheets = getSheetsClient();
+            const response = await sheets.spreadsheets.values.get({
+                spreadsheetId,
+                range: `${tabName}!A:Z`,
+            });
+            return response.data.values || [];
+        } catch (error: any) {
+            // If tab doesn't exist, return empty
+            if (error.code === 400) return [];
+            console.error(`Error reading tab ${tabName}:`, error);
+            return [];
+        }
+    }
+
+    /**
+     * Overwrites a tab with new data. Creates it if it doesn't exist.
+     */
+    static async writeTab(spreadsheetId: string, tabName: string, rows: string[][]) {
+        try {
+            const sheets = getSheetsClient();
+
+            // 1. Check if Sheet exists
+            const metadata = await sheets.spreadsheets.get({ spreadsheetId });
+            const sheetExists = metadata.data.sheets?.some(s => s.properties?.title === tabName);
+
+            if (!sheetExists) {
+                await sheets.spreadsheets.batchUpdate({
+                    spreadsheetId,
+                    requestBody: {
+                        requests: [{
+                            addSheet: { properties: { title: tabName } }
+                        }]
+                    }
+                });
+            }
+
+            // 2. Clear existing content
+            await sheets.spreadsheets.values.clear({
+                spreadsheetId,
+                range: `${tabName}!A:Z`,
+            });
+
+            // 3. Update with new rows
+            if (rows.length > 0) {
+                await sheets.spreadsheets.values.update({
+                    spreadsheetId,
+                    range: `${tabName}!A1`,
+                    valueInputOption: 'USER_ENTERED',
+                    requestBody: { values: rows }
+                });
+            }
+            return true;
+        } catch (error) {
+            console.error(`Error writing tab ${tabName}:`, error);
+            throw new Error(`Failed to write to system tab ${tabName}`);
+        }
+    }
 }
