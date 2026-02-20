@@ -5,7 +5,8 @@ import { ConfigService } from '../services/configService';
 
 export const getJobs = async (req: Request, res: Response) => {
     try {
-        const jobs = await GoogleService.getReimbursements(undefined, undefined, "Jobs");
+        const projectSlug = req.query.projectSlug as string | undefined;
+        const jobs = await GoogleService.getReimbursements(undefined, undefined, "Jobs", projectSlug);
         res.json(jobs);
     } catch (error: any) {
         res.status(500).json({ status: 'error', message: error.message });
@@ -14,7 +15,7 @@ export const getJobs = async (req: Request, res: Response) => {
 
 export const submitJob = async (req: Request, res: Response) => {
     try {
-        const { note, assignee, status, taskName: userTaskName } = req.body; // assignee, status, taskName might come from frontend now
+        const { note, assignee, status, taskName: userTaskName, projectSlug } = req.body;
         const file = req.file;
 
         if (!note && !file) {
@@ -35,14 +36,12 @@ export const submitJob = async (req: Request, res: Response) => {
         let imageUrl = "";
         if (file) {
             console.log("Uploading Image...");
-            // Use taskName or category for file context
             imageUrl = await GoogleService.uploadSlip(file, userTaskName || analysis.taskName || analysis.category || "Job", analysis.date, "Jobs");
         }
 
-        // 3. Save to Google Sheets (New Schema)
+        // 3. Save to Google Sheets
         console.log("Saving to Sheets...");
 
-        // Use user-provided values if available, otherwise fallback to AI/Default
         const finalAssignee = assignee || "Unassigned";
         const finalStatus = status || analysis.status || "Pending";
         const finalTaskName = userTaskName || analysis.taskName || "Untitled Task";
@@ -55,7 +54,7 @@ export const submitJob = async (req: Request, res: Response) => {
             description: analysis.description || note,
             cost: analysis.cost || 0,
             imageUrl: imageUrl,
-        }, "Jobs");
+        }, "Jobs", projectSlug);
 
         res.json({
             status: 'success',
@@ -114,7 +113,6 @@ export const updateJob = async (req: Request, res: Response) => {
 
 export const deleteJob = async (req: Request, res: Response) => {
     try {
-        // Assume DELETE uses query params or body. Let's support body or query.
         const id = req.body.id || req.query.id;
         const sheetName = req.body.sheetName || req.query.sheetName;
 

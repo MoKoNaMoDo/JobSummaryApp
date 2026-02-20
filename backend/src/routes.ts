@@ -34,4 +34,11 @@ router.patch('/jobs/status', updateJobStatus);
 router.patch('/jobs', updateJob);
 router.delete('/jobs', deleteJob);
 
+// Route: Projects
+import { getProjects, createProject, updateProject, deleteProject } from './controllers/projectController';
+router.get('/projects', getProjects);
+router.post('/projects', createProject);
+router.patch('/projects/:id', updateProject);
+router.delete('/projects/:id', deleteProject);
+
 export default router;

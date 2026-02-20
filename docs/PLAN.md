@@ -1,36 +1,132 @@
-# Project Plan: Dynamic Year-Based Spreadsheets
+# Multi-Project (Rooms) Feature
 
-## 1. Executive Summary
-The goal is to modify the Job Summary application's data layer to dynamically manage Google Sheets. Instead of using a single hardcoded Spreadsheet file for everything, the system will now automatically create and manage Spreadsheets separated by **Year** (e.g., File: `JobSummary_2026`), and organize the data inside by **Month** (e.g., Tab: `02-2026`). 
+## Overview
 
-**Crucially, this logic will be completely isolated from the old ClearBill system**, ensuring zero impact on legacy code.
+เปลี่ยนจาก **Single Project** → **Multi-Project Hub**
+- หน้าแรกแสดงรายชื่อทุกโปรเจค + สถิติภาพรวม
+- กดเข้าแต่ละโปรเจค → Dashboard แยกกัน (เหมือนตอนนี้)
+- **ข้อมูลอยู่ Google Sheet ไฟล์เดียว** แยก Tab โดยตั้งชื่อรูปแบบ `{ProjectSlug}_{MM-YYYY}`
 
-## 2. Technical Architecture & Logic
-**Workflow when adding/reading a job:**
-1. Determine the `Year` and `Month` from the job's date.
-2. Search the designated Google Drive Folder for a Spreadsheet file named `JobSummary_{Year}`.
-3. **If the file DOES NOT exist:** Create a new Google Spreadsheet file named `JobSummary_{Year}` inside that folder.
-4. **If the file DOES exist:** Retrieve its `spreadsheetId`.
-5. Connect to that `spreadsheetId` and look for a Tab named `{Month}-{Year}`.
-6. **If the Tab DOES NOT exist:** Create the Tab and inject the header row.
-7. Append or edit the data in that Tab.
+---
 
-## 3. Orchestration Details (Available Agents)
+## Data Design
 
-### Phase 2.1: Database Architect (`database-architect`) & Backend Specialist (`backend-specialist`)
-- **Action**: Completely rewrite the `appendToSheet`, `getReimbursements`, `updateRowStatus`, `updateRowData`, and `deleteRow` functions in `backend/src/services/googleService.ts`.
-- **Implementation**: 
-    - Introduce Google Drive API calls (`drive.files.list`, `drive.files.create`) to discover and spawn Spreadsheets dynamically.
-    - Ensure `ConfigService.get('googleDriveFolderId')` is used as the parent directory for all new Spreadsheets.
-    - Maintain strict separation so the original ClearBill functions remain untouched (or we duplicate the GoogleService methods specifically for Jobs).
+### Project Registry
+เก็บรายชื่อโปรเจคใน `data/projects.json`:
 
-### Phase 2.2: Frontend Specialist (`frontend-specialist`)
-- **Action**: Review and adjust `frontend/app/page.tsx` and `frontend/lib/api.ts`.
-- **Implementation**: Ensure that when a user interacts with the Kanban board (Edit, Change Status, Delete), the frontend provides enough context (like the `date` string) so the backend can compute the Year and resolve the correct file ID. Ensure loading states gracefully handle the delay of creating a new Google Sheet file.
+```json
+[
+  {
+    "id": "abc123",
+    "name": "ซ่อมบำรุงตึก A",
+    "slug": "building-a",
+    "createdAt": "2026-02-21",
+    "color": "#6366f1"
+  }
+]
+```
 
-### Phase 2.3: Test Engineer (`test-engineer`) & Security Auditor (`security-auditor`)
-- **Action**: Validate the flow.
-- **Implementation**:
-    - Run the standard security scan (`security_scan.py`).
-    - Run the linter (`lint_runner.py`).
-    - Attempt to log a mock job for the year 2027 to verify "next year" file creation works.
+### Google Sheet Tab Naming
+```
+เดิม:    02-2026
+ใหม่:    building-a_02-2026
+```
+- `slug` สร้างจากชื่อโปรเจค (lowercase, dash-separated)
+- ถ้าเป็น Tab ที่มีอยู่แล้ว (โปรเจคเก่าก่อน feature นี้) → migrate ภายหลัง
+
+### Team Members
+- **Global** — รายชื่อจาก Settings ใช้ร่วมทุกโปรเจค
+- ใน Dropdown เลือก Assignee จะแสดงชื่อจาก Settings + ชื่อที่เจอใน Sheet ของโปรเจคนั้น (auto-detect)
+
+---
+
+## API Changes
+
+### New Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/projects` | List all projects |
+| `POST` | `/api/projects` | Create new project |
+| `PATCH` | `/api/projects/:id` | Update project name/color |
+| `DELETE` | `/api/projects/:id` | Delete project |
+
+### Modified Endpoints
+
+| Endpoint | Change |
+|----------|--------|
+| `GET /api/jobs` | เพิ่ม `?projectSlug=building-a` query param |
+| `POST /api/jobs` | เพิ่ม `projectSlug` ใน body |
+| `PATCH /api/jobs` | ไม่เปลี่ยน (ใช้ `sheetName` เดิม) |
+| `PATCH /api/jobs/status` | ไม่เปลี่ยน |
+| `DELETE /api/jobs` | ไม่เปลี่ยน |
+
+### Backend Files
+
+| File | Action |
+|------|--------|
+| **[NEW]** `services/projectService.ts` | CRUD projects.json |
+| **[NEW]** `controllers/projectController.ts` | API handlers |
+| **[MOD]** `routes.ts` | เพิ่ม `/api/projects` routes |
+| **[MOD]** `services/googleService.ts` | เปลี่ยน `sheetName` จาก `MM-YYYY` → `{slug}_MM-YYYY` |
+| **[MOD]** `controllers/jobController.ts` | รับ `projectSlug` → ส่ง GoogleService |
+
+---
+
+## Frontend Changes
+
+### Routing
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | **ProjectsPage** (NEW) | หน้ารวมโปรเจค — Grid cards + สถิติ |
+| `/projects/[slug]` | **Dashboard** (เดิม = page.tsx) | Kanban + Metrics ของโปรเจคนั้น |
+| `/projects/[slug]/add` | **AddJob** (เดิม = add/page.tsx) | เพิ่มงานเข้าโปรเจค |
+| `/settings` | **Settings** (เดิม) | ตั้งค่า Global |
+
+### Frontend Files
+
+| File | Action |
+|------|--------|
+| **[NEW]** `app/page.tsx` | **Project Hub** — Grid ของโปรเจค |
+| **[NEW]** `app/projects/[slug]/page.tsx` | ย้าย Dashboard เดิมมา + รับ `slug` จาก URL |
+| **[NEW]** `app/projects/[slug]/add/page.tsx` | ย้าย Add page เดิมมา + ส่ง `slug` ไป API |
+| **[NEW]** `components/CreateProjectDialog.tsx` | Modal สร้างโปรเจคใหม่ |
+| **[MOD]** `lib/api.ts` | เพิ่ม `projectService` (CRUD) + แก้ `jobService` ส่ง `slug` |
+| **[MOD]** `lib/translations.ts` | เพิ่ม keys สำหรับหน้า Projects |
+| **[MOD]** `app/layout.tsx` | ปรับ Navigation — "Home" → ไปหน้า Projects |
+
+---
+
+## Implementation Order
+
+```
+Phase 1: Backend (Data Layer)
+  1. สร้าง projectService.ts + projects.json
+  2. สร้าง projectController.ts + routes
+  3. แก้ googleService.ts รองรับ slug prefix
+  4. แก้ jobController.ts รับ projectSlug
+
+Phase 2: Frontend (Pages)
+  5. สร้างหน้า Project Hub (app/page.tsx ใหม่)
+  6. ย้าย Dashboard → app/projects/[slug]/page.tsx
+  7. ย้าย Add Job → app/projects/[slug]/add/page.tsx
+  8. แก้ API client + translations
+
+Phase 3: Polish
+  9. Navigation (bottom bar) อัปเดต
+  10. i18n keys ใหม่
+  11. Build verification
+```
+
+---
+
+## Verification
+
+- [ ] สร้างโปรเจคใหม่ได้
+- [ ] เข้าหน้า Kanban ของแต่ละโปรเจคแยกกัน
+- [ ] เพิ่มงานเข้าถูกโปรเจค (Tab ในชีทตรง)
+- [ ] หน้ารวมแสดงสถิติแต่ละโปรเจค
+- [ ] Build ผ่าน + TypeScript ผ่าน
+
+> **ประมาณงาน**: Backend ~4 ไฟล์ (2 ใหม่, 2 แก้) + Frontend ~6 ไฟล์ (4 ใหม่, 2 แก้)

@@ -126,11 +126,12 @@ export class GoogleService {
         description: string;
         cost: number;
         imageUrl: string;
-    }, prefix: string = "JobSummary") {
+    }, prefix: string = "JobSummary", projectSlug?: string) {
         try {
             const dateObj = new Date(data.date);
             const yearStr = String(dateObj.getFullYear());
-            const sheetName = `${String(dateObj.getMonth() + 1).padStart(2, '0')}-${yearStr}`; // ex: 02-2026
+            const monthYear = `${String(dateObj.getMonth() + 1).padStart(2, '0')}-${yearStr}`;
+            const sheetName = projectSlug ? `${projectSlug}_${monthYear}` : monthYear; // e.g. building-a_02-2026
 
             // Determine target Spreadsheet ID based on context
             const spreadsheetId = prefix === "Jobs"
@@ -195,7 +196,7 @@ export class GoogleService {
     }
 
     // Get rows from Sheets (Mapped to New Schema)
-    static async getReimbursements(month?: string, year?: string, prefix: string = "JobSummary") {
+    static async getReimbursements(month?: string, year?: string, prefix: string = "JobSummary", projectSlug?: string) {
         try {
             let targetMonth = month;
             let targetYear = year;
@@ -206,7 +207,8 @@ export class GoogleService {
                 targetYear = String(now.getFullYear());
             }
 
-            const sheetName = `${targetMonth}-${targetYear}`; // e.g. 02-2026
+            const monthYear = `${targetMonth}-${targetYear}`;
+            const sheetName = projectSlug ? `${projectSlug}_${monthYear}` : monthYear; // e.g. building-a_02-2026
 
             // Determine target Spreadsheet ID based on context
             const spreadsheetId = prefix === "Jobs"

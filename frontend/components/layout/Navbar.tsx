@@ -4,13 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, PlusCircle, Settings } from "lucide-react";
+import { FolderKanban, PlusCircle, Settings } from "lucide-react";
 
 import { useLanguage } from "@/components/LanguageProvider";
 
 const navItems = [
-    { href: "/", label: "common.dashboard", icon: LayoutDashboard },
-    { href: "/add", label: "common.newEntry", icon: PlusCircle },
+    { href: "/", label: "projects.hubTitle", icon: FolderKanban },
     { href: "/settings", label: "common.settings", icon: Settings },
 ];
 
@@ -18,11 +17,17 @@ export function Navbar() {
     const pathname = usePathname();
     const { t } = useLanguage();
 
+    // Determine active state - project pages are under "/"
+    const getIsActive = (href: string) => {
+        if (href === "/") return pathname === "/" || pathname.startsWith("/projects");
+        return pathname === href;
+    };
+
     return (
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
             <div className="flex items-center gap-2 p-2 rounded-full border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl shadow-primary/20">
                 {navItems.map((item) => {
-                    const isActive = pathname === item.href;
+                    const isActive = getIsActive(item.href);
                     const Icon = item.icon;
 
                     return (
