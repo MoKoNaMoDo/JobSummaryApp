@@ -23,7 +23,7 @@ export const jobService = {
     },
 
     // Save Settings
-    saveConfig: async (config: any) => {
+    saveConfig: async (config: Record<string, unknown>) => {
         const response = await api.post("/config", config);
         return response.data;
     },
@@ -41,7 +41,7 @@ export const jobService = {
     },
 
     // Update Full Job Details
-    updateJob: async (data: any) => {
+    updateJob: async (data: Record<string, unknown>) => {
         const response = await api.patch("/jobs", data);
         return response.data;
     },

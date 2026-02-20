@@ -1,31 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { motion } from "framer-motion";
-import { Database, Key, Save, Sparkles, User, Users, Loader2 } from "lucide-react";
+import { Database, Save, Sparkles, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { jobService } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 import {
     Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
 } from "@/components/ui/card";
-import {
-    Form,
-    FormControl,
-    FormDescription,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
+
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -40,7 +25,8 @@ export default function SettingsPage() {
         googleDriveFolderId: '',
         googleDriveFolderIdJobs: '',
         serviceAccountJson: '',
-        users: ''
+        users: '',
+        googleAppsScriptUrl: ''
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -239,6 +225,18 @@ export default function SettingsPage() {
                                 placeholder="{ ... }"
                                 className="bg-black/20 font-mono text-sm min-h-[100px]"
                             />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="googleAppsScriptUrl">Google Apps Script URL (Image Proxy)</Label>
+                            <Input
+                                id="googleAppsScriptUrl"
+                                name="googleAppsScriptUrl"
+                                value={config.googleAppsScriptUrl}
+                                onChange={handleChange}
+                                placeholder="https://script.google.com/macros/s/.../exec"
+                                className="bg-black/20 font-mono text-sm border-green-500/30 focus-visible:ring-green-500"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">This Web App URL bypasses the Google Drive Quota limits for uploading images.</p>
                         </div>
                     </div>
                 </Card>

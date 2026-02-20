@@ -69,7 +69,7 @@ export class GoogleService {
         }
     }
 
-    // Upload Image to Google Drive
+    // Upload Image to Google Drive via Apps Script Proxy
     static async uploadSlip(file: Express.Multer.File, contextName: string, date: string, prefix: string = "JobSummary"): Promise<string> {
         try {
             // Determine target Folder ID based on context
@@ -82,29 +82,37 @@ export class GoogleService {
                 folderId = ConfigService.get('googleDriveFolderId');
             }
 
-            if (folderId) {
-                const drive = getDriveClient();
-                const bufferStream = new (require('stream').PassThrough)();
-                bufferStream.end(file.buffer);
+            // Target Apps Script URL (Fallback to the one explicitly tested by the user)
+            const proxyUrl = ConfigService.get('googleAppsScriptUrl') || "https://script.google.com/macros/s/AKfycbzZK2kRgPLXTb0LPn7Lsv2vfbfGeN2gPs5ZAfkAE5fbCr7Erij57HgqGWnqbAsK3VObYg/exec";
 
-                const response = await drive.files.create({
-                    requestBody: {
-                        name: `${date || new Date().toISOString().split('T')[0]}_${contextName || 'Job'}_${Date.now()}.jpg`,
-                        parents: [folderId],
-                    },
-                    media: {
-                        mimeType: file.mimetype,
-                        body: bufferStream,
-                    },
-                    fields: 'id, webViewLink, webContentLink',
+            if (folderId && proxyUrl) {
+                const base64Data = file.buffer.toString('base64');
+                const fileName = `${date || new Date().toISOString().split('T')[0]}_${contextName || 'Job'}_${Date.now()}.jpg`;
+
+                const payload = {
+                    base64: base64Data,
+                    fileName: fileName,
+                    mimeType: file.mimetype,
+                    folderId: folderId
+                };
+
+                const response = await axios.post(proxyUrl, payload, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
-                return response.data.webViewLink || '';
+
+                if (response.data && response.data.status === 'success') {
+                    return response.data.url;
+                } else {
+                    throw new Error(response.data?.message || 'Proxy returned an error');
+                }
             }
 
-            throw new Error('No Upload Method Configured (Drive Folder ID)');
+            throw new Error('No Upload Method Configured (Drive Folder ID or Proxy URL)');
 
         } catch (error: any) {
-            console.error('Error uploading:', error.message);
+            console.error('Error uploading via Proxy:', error.message);
             return `UPLOAD_FAILED`;
         }
     }

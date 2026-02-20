@@ -13,6 +13,7 @@ export interface AppConfig {
     serviceAccountJson?: string; // Stored as stringified JSON
     systemPassword?: string;
     users?: string[]; // New: List of assignees
+    googleAppsScriptUrl?: string; // Image Upload Proxy Endpoint
 }
 
 // Ensure data directory exists (Likely fails on Vercel/Read-only FS, but okay for local)
@@ -63,7 +64,8 @@ export const ConfigService = {
             googleDocTemplateId: 'GOOGLE_DOC_TEMPLATE_ID',
             serviceAccountJson: 'GOOGLE_APPLICATION_CREDENTIALS_JSON',
             systemPassword: 'SYSTEM_PASSWORD',
-            users: 'SYSTEM_USERS' // JSON string of users e.g. ["Alice", "Bob"]
+            users: 'SYSTEM_USERS', // JSON string of users e.g. ["Alice", "Bob"]
+            googleAppsScriptUrl: 'GOOGLE_APPS_SCRIPT_URL'
         };
 
         const envValue = process.env[envMap[key]];
