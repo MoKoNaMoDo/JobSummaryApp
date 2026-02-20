@@ -1,9 +1,17 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useLanguage } from "./LanguageProvider";
 import { Button } from "./ui/button";
+
 export function LanguageSwitcher() {
     const { language, setLanguage } = useLanguage();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => setMounted(true), []);
+
+    // Avoid hydration mismatch — render nothing until client-side mount
+    if (!mounted) return <Button variant="ghost" size="icon" className="rounded-full text-white/50 hover:text-white w-9 h-9" />;
 
     return (
         <Button
