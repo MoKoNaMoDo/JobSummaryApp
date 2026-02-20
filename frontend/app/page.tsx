@@ -302,92 +302,97 @@ export default function Home() {
   );
 
   return (
-    <div className="space-y-8 pb-10">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 pb-10">
+      {/* Header */}
+      <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
             {t('dashboard.title')}
           </h1>
-          <p className="text-muted-foreground mt-2">
-            {t('dashboard.subtitle')}
-          </p>
+          <p className="text-slate-400 text-sm mt-1">{t('dashboard.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-4">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              type="text"
-              placeholder={t('common.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 h-10 w-[220px] bg-white/5 border-white/10 text-white placeholder:text-slate-500 rounded-xl focus:ring-indigo-500/30 focus:border-indigo-500/30"
-            />
-          </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="flex bg-white/10 p-1 rounded-xl">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`rounded-lg transition-all ${timeFilter === 'Today' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
-                onClick={() => setTimeFilter('Today')}
-              >
-                <CalendarDays className="w-4 h-4 mr-2" />
-                {t('dashboard.today') || "Today"}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`rounded-lg transition-all ${timeFilter === 'All' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
-                onClick={() => setTimeFilter('All')}
-              >
-                <ListFilter className="w-4 h-4 mr-2" />
-                {t('dashboard.allJobs') || "All Monthly"}
-              </Button>
-            </div>
-            <div className="flex bg-white/10 p-1 rounded-xl">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`rounded-lg transition-all ${groupBy === 'Status' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
-                onClick={() => setGroupBy('Status')}
-              >
-                <LayoutTemplate className="w-4 h-4 mr-2" />
-                {t('dashboard.groupByStatus')}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`rounded-lg transition-all ${groupBy === 'Category' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
-                onClick={() => setGroupBy('Category')}
-              >
-                <LayoutTemplate className="w-4 h-4 mr-2" />
-                {t('dashboard.groupByCategory')}
-              </Button>
-            </div>
-          </div>
-          <Link href="/add">
-            <Button size="lg" className="rounded-full shadow-lg shadow-purple-500/20 bg-purple-600 hover:bg-purple-500 text-white border-0 transition-colors">
-              <Plus className="mr-2 h-5 w-5" />
-              {t('common.logWork')}
-            </Button>
-          </Link>
-        </div>
+        <Link href="/add">
+          <Button size="lg" className="rounded-xl shadow-lg shadow-indigo-500/20 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white border-0 transition-all">
+            <Plus className="mr-2 h-5 w-5" />
+            {t('common.logWork')}
+          </Button>
+        </Link>
       </header>
 
-      {/* Metrics Bar */}
-      <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 bg-[#1E1B4B]/50 border-purple-900/50 text-white backdrop-blur-xl rounded-2xl">
-          <h3 className="text-sm font-medium text-purple-200/60 mb-2">{t('dashboard.totalJobs')}</h3>
+      {/* Toolbar: Search + Filters */}
+      <div className="flex flex-wrap items-center gap-3 p-3 bg-slate-800/40 border border-slate-700/30 rounded-2xl backdrop-blur-sm">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Input
+            type="text"
+            placeholder={t('common.searchPlaceholder')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-4 h-9 bg-slate-900/50 border-slate-600/30 text-white placeholder:text-slate-500 rounded-xl text-sm"
+          />
+        </div>
+
+        <div className="h-6 w-px bg-slate-600/30 hidden sm:block" />
+
+        {/* Time Filters */}
+        <div className="flex bg-slate-900/50 p-0.5 rounded-lg">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`rounded-md h-8 text-xs px-3 transition-all ${timeFilter === 'Today' ? 'bg-indigo-500/20 text-indigo-300 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            onClick={() => setTimeFilter('Today')}
+          >
+            <CalendarDays className="w-3.5 h-3.5 mr-1.5" />
+            {t('dashboard.today')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`rounded-md h-8 text-xs px-3 transition-all ${timeFilter === 'All' ? 'bg-indigo-500/20 text-indigo-300 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            onClick={() => setTimeFilter('All')}
+          >
+            <ListFilter className="w-3.5 h-3.5 mr-1.5" />
+            {t('dashboard.allJobs')}
+          </Button>
+        </div>
+
+        {/* Group By */}
+        <div className="flex bg-slate-900/50 p-0.5 rounded-lg">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`rounded-md h-8 text-xs px-3 transition-all ${groupBy === 'Status' ? 'bg-indigo-500/20 text-indigo-300 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            onClick={() => setGroupBy('Status')}
+          >
+            <LayoutTemplate className="w-3.5 h-3.5 mr-1.5" />
+            {t('dashboard.groupByStatus')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`rounded-md h-8 text-xs px-3 transition-all ${groupBy === 'Category' ? 'bg-indigo-500/20 text-indigo-300 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            onClick={() => setGroupBy('Category')}
+          >
+            <LayoutTemplate className="w-3.5 h-3.5 mr-1.5" />
+            {t('dashboard.groupByCategory')}
+          </Button>
+        </div>
+      </div>
+
+      {/* Metrics */}
+      <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="p-5 bg-slate-800/40 border-slate-700/30 text-white backdrop-blur-sm rounded-2xl">
+          <h3 className="text-xs font-medium text-slate-400 mb-1">{t('dashboard.totalJobs')}</h3>
           <p className="text-3xl font-bold">{totalCount}</p>
         </Card>
-        <Card className="p-6 bg-[#1E1B4B]/50 border-purple-900/50 text-white backdrop-blur-xl rounded-2xl">
-          <h3 className="text-sm font-medium text-purple-200/60 mb-2">{t('dashboard.completedLabel')}</h3>
-          <p className="text-3xl font-bold text-green-400">{completedCount} <span className="text-sm font-normal text-purple-200/40 ml-1">/{totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%</span></p>
+        <Card className="p-5 bg-slate-800/40 border-slate-700/30 text-white backdrop-blur-sm rounded-2xl">
+          <h3 className="text-xs font-medium text-slate-400 mb-1">{t('dashboard.completedLabel')}</h3>
+          <p className="text-3xl font-bold text-emerald-400">{completedCount} <span className="text-sm font-normal text-slate-500 ml-1">/{totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%</span></p>
         </Card>
-        <Card className="p-6 bg-[#1E1B4B]/50 border-purple-900/50 text-white backdrop-blur-xl rounded-2xl">
-          <h3 className="text-sm font-medium text-purple-200/60 mb-2">{t('dashboard.estimatedCost')}</h3>
-          <p className="text-3xl font-bold text-orange-400">{totalCost.toLocaleString()} {t('dashboard.currency')}</p>
+        <Card className="p-5 bg-slate-800/40 border-slate-700/30 text-white backdrop-blur-sm rounded-2xl">
+          <h3 className="text-xs font-medium text-slate-400 mb-1">{t('dashboard.estimatedCost')}</h3>
+          <p className="text-3xl font-bold text-orange-400">{totalCost.toLocaleString()} <span className="text-sm font-normal text-slate-500">{t('dashboard.currency')}</span></p>
         </Card>
       </motion.div>
 
