@@ -64,18 +64,20 @@ export class GeminiService {
             if (!apiKey) throw new Error("Gemini API Key is missing.");
 
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
             const prompt = `
-                Analyze this daily work log entry (text note and optional image) and extract summary data in JSON format:
+                Analyze this daily work log entry (text note and optional image). 
+                The user is likely a Software Developer or in a Technical role.
+                Extract summary data in JSON format.
                 
                 Note Context: "${note}"
                 
                 Extract:
                 {
-                    "taskName": "string", (Short title of the task, e.g., "Fix AC at Meeting Room", "Install Wiring")
-                    "category": "string", (Type of work: "Installation", "Repair", "Maintenance", "Survey", "General")
-                    "description": "string", (Refined summary of what was done, including progress or issues if mentioned)
+                    "taskName": "string", (Short, professional title, e.g., "Fix Auth Race Condition", "Implement Dashboard API")
+                    "category": "string", (One of: "Feature", "BugFix", "Refactor", "Testing", "DevOps", "Maintenance", "Meeting", "Support", "Research")
+                    "description": "string", (Professional summary of what was done. Use technical terms if appropriate.)
                     "date": "YYYY-MM-DD", (Date mentioned or today's date)
                     "cost": number, (Any associated cost mentioned, else 0)
                     "status": "string" (Suggest "Completed", "In Progress", or "Pending" based on context)
@@ -104,15 +106,54 @@ export class GeminiService {
 
         } catch (error) {
             console.error("Error analyzing job:", error);
-            // Fallback if AI fails:
             return {
-                taskName: "General Task",
+                taskName: "Work Entry",
                 category: "General",
                 description: note,
                 date: new Date().toISOString().split('T')[0],
                 cost: 0,
                 status: "Pending"
             };
+        }
+    }
+
+    static async refineText(text: string, mode: 'refine' | 'expand' | 'organize') {
+        try {
+            const apiKey = process.env.GROQ_API_KEY;
+            if (!apiKey) throw new Error("Groq API Key is missing. Please set GROQ_API_KEY in .env");
+
+            const Groq = (await import('groq-sdk')).default;
+            const groq = new Groq({ apiKey });
+
+            let instruction = "";
+            if (mode === 'refine') {
+                instruction = "Refine this developer work log into professional, formal, and concise language. Correct grammar and use industry-standard terminology.";
+            } else if (mode === 'expand') {
+                instruction = "Expand this developer work log with additional likely technical details, best practices involved, or potential impacts. Make it detailed for a technical report.";
+            } else if (mode === 'organize') {
+                instruction = "Organize this work log into a clear, structured list with bullet points. Group related items and make it easy to scan.";
+            }
+
+            const completion = await groq.chat.completions.create({
+                messages: [
+                    {
+                        role: "system",
+                        content: `You are a professional technical writer. ${instruction} Return ONLY the refined text, no explanations or markdown code blocks.`
+                    },
+                    {
+                        role: "user",
+                        content: text
+                    }
+                ],
+                model: "llama-3.1-8b-instant",
+                temperature: 0.6,
+                max_tokens: 1024,
+            });
+
+            return completion.choices[0]?.message?.content?.trim() ?? text;
+        } catch (error: any) {
+            console.error("GeminiService.refineText (Groq) Error:", error.message);
+            throw error;
         }
     }
 }

@@ -90,7 +90,12 @@ export const ConfigService = {
     },
 
     get: (key: keyof AppConfig): any => {
-        // Priority: In-memory/Sheets cache > Environment Variable
+        // AI Key Priority: Environment Variable > Sheets/Cache (for security/stability)
+        if (key === 'geminiApiKey' && process.env.GEMINI_API_KEY) {
+            return process.env.GEMINI_API_KEY;
+        }
+
+        // Priority for others: In-memory/Sheets cache > Environment Variable
         if (configCache[key]) return configCache[key];
 
         // Map config keys to Env vars for fallback

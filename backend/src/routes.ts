@@ -12,7 +12,7 @@ const upload = multer({
 
 import { getConfig, updateConfig, login } from './controllers/configController';
 
-import { submitJob, getJobs, updateJob, updateJobStatus, deleteJob } from './controllers/jobController';
+import { submitJob, getJobs, updateJob, updateJobStatus, deleteJob, refineJobText } from './controllers/jobController';
 
 // Route: POST /api/reimbursements
 router.post('/reimbursements', upload.single('slip'), submitReimbursement);
@@ -33,6 +33,7 @@ router.get('/jobs', getJobs);
 router.patch('/jobs/status', updateJobStatus);
 router.patch('/jobs', updateJob);
 router.delete('/jobs', deleteJob);
+router.post('/ai/refine', refineJobText);
 
 // Route: Projects
 import { getProjects, createProject, updateProject, deleteProject } from './controllers/projectController';

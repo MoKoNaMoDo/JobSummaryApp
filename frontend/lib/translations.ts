@@ -109,6 +109,10 @@ export const translations = {
             pendingLabel: "pending",
             saved: "Saved",
             jobsSaved: "jobs saved!",
+            aiRefine: "Refine ✨",
+            aiExpand: "Expand 📝",
+            aiOrganize: "Organize 🧱",
+            aiRefining: "Refining...",
         },
         settings: {
             title: "Settings",
@@ -256,6 +260,10 @@ export const translations = {
             pendingLabel: "รอส่ง",
             saved: "บันทึกแล้ว",
             jobsSaved: "งานถูกบันทึกแล้ว!",
+            aiRefine: "ขัดเกลา ✨",
+            aiExpand: "ขยายความ 📝",
+            aiOrganize: "จัดระเบียบ 🧱",
+            aiRefining: "กำลังขัดเกลา...",
         },
         settings: {
             title: "ตั้งค่า",

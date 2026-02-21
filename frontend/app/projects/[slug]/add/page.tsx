@@ -52,6 +52,7 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
     const [entries, setEntries] = useState<JobEntry[]>([createEmptyEntry()]);
     const [users, setUsers] = useState<string[]>([]);
     const [isSubmittingAll, setIsSubmittingAll] = useState(false);
+    const [refiningIds, setRefiningIds] = useState<Record<string, boolean>>({});
 
     const [mounted, setMounted] = useState(false);
 
@@ -95,6 +96,28 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
 
     const clearFile = (id: string) => {
         updateEntry(id, { file: null, preview: null });
+    };
+
+    const handleRefine = async (id: string, text: string, mode: 'refine' | 'expand' | 'organize') => {
+        if (!text || text.length < 5) {
+            toast.error(t('addJob.validationImageOrNote'));
+            return;
+        }
+
+        setRefiningIds(prev => ({ ...prev, [id]: true }));
+        try {
+            const res = await jobService.refineText(text, mode);
+            if (res.status === 'success') {
+                updateEntry(id, { note: res.data });
+                toast.success(t('addJob.aiRefining'));
+            }
+        } catch (error: any) {
+            console.error("Refine Error:", error);
+            const serverMessage = error.response?.data?.message;
+            toast.error(serverMessage || t('addJob.toastError'));
+        } finally {
+            setRefiningIds(prev => ({ ...prev, [id]: false }));
+        }
     };
 
     const submitEntry = async (entry: JobEntry): Promise<boolean> => {
@@ -332,7 +355,32 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
 
                                 {/* Note */}
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-slate-400">{t('addJob.workDescription')}</label>
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-medium text-slate-400">{t('addJob.workDescription')}</label>
+                                        <div className="flex gap-1.5">
+                                            {[
+                                                { mode: 'refine' as const, label: t('addJob.aiRefine'), icon: Sparkles },
+                                                { mode: 'expand' as const, label: t('addJob.aiExpand'), icon: Plus },
+                                                { mode: 'organize' as const, label: t('addJob.aiOrganize'), icon: Activity },
+                                            ].map((btn) => (
+                                                <Button
+                                                    key={btn.mode}
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleRefine(entry.id, entry.note, btn.mode)}
+                                                    disabled={refiningIds[entry.id] || !entry.note}
+                                                    className="h-7 px-2 text-[10px] bg-indigo-500/5 hover:bg-indigo-500/15 text-indigo-300 border border-indigo-500/10 rounded-lg transition-all"
+                                                >
+                                                    {refiningIds[entry.id] ? (
+                                                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                                                    ) : (
+                                                        <btn.icon className="w-3 h-3 mr-1" />
+                                                    )}
+                                                    {btn.label}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
                                     <Textarea
                                         placeholder={t('addJob.placeholderDescription')}
                                         value={entry.note}

@@ -127,3 +127,35 @@ export const deleteJob = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
+
+export const refineJobText = async (req: Request, res: Response) => {
+    try {
+        const { text, mode } = req.body;
+        if (!text) {
+            res.status(400).json({ status: 'error', message: 'Text is required' });
+            return;
+        }
+        if (!['refine', 'expand', 'organize'].includes(mode)) {
+            res.status(400).json({ status: 'error', message: 'Invalid mode' });
+            return;
+        }
+
+        const refined = await GeminiService.refineText(text, mode as any);
+        res.json({ status: 'success', data: refined });
+    } catch (error: any) {
+        console.error("AI Refine Controller Error:", error);
+
+        let message = error.message || "Internal Server Error during AI Refinement";
+        let statusCode = 500;
+
+        if (message.includes("quota") || message.includes("429") || message.includes("RESOURCE_EXHAUSTED")) {
+            message = "AI Rate limit reached (Gemini Free Tier). Please wait a minute and try again.";
+            statusCode = 429;
+        } else if (message.includes("API key not valid") || message.includes("INVALID_ARGUMENT")) {
+            message = "Invalid AI API Key. Please check your configuration.";
+            statusCode = 401;
+        }
+
+        res.status(statusCode).json({ status: 'error', message });
+    }
+};

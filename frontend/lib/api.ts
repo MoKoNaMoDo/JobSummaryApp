@@ -79,5 +79,9 @@ export const jobService = {
     deleteJob: async (id: number, sheetName: string) => {
         const response = await api.delete("/jobs", { data: { id, sheetName } });
         return response.data;
+    },
+    refineText: async (text: string, mode: 'refine' | 'expand' | 'organize') => {
+        const response = await api.post("/ai/refine", { text, mode });
+        return response.data;
     }
 };
