@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ConfigService } from '@/lib/services/configService';
+import { ConfigService, AppConfig } from '@/lib/services/configService';
 
 let configLoaded = false;
 async function ensureConfig() {
@@ -11,7 +11,7 @@ export async function GET() {
     try {
         // Helper function to get config value and handle "undefined" or "null" strings
         const getConfigValue = (key: string) => {
-            const value = ConfigService.get(key);
+            const value = ConfigService.get(key as keyof AppConfig);
             // Treat string "undefined" or "null" as truly missing
             if (value === "undefined" || value === "null" || value === undefined || value === null) {
                 return null;
