@@ -1,8 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import dotenv from "dotenv";
 import { ConfigService } from "./configService";
-
-dotenv.config();
 
 export class GeminiService {
     static async analyzeSlip(fileBuffer: Buffer, mimeType: string) {
@@ -40,9 +37,8 @@ export class GeminiService {
             const response = await result.response;
             const text = response.text();
 
-            console.log("Gemini Raw Response:", text); // Debugging
+            console.log("Gemini Raw Response:", text);
 
-            // Clean up code blocks if present
             const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
             try {
@@ -129,7 +125,6 @@ export class GeminiService {
 
             let instruction = "";
             if (mode === 'title') {
-                // Generate short task name only
                 const titleLang = isThai
                     ? "สร้างชื่องานสั้นๆ กระชับ ไม่เกิน 8 คำ จากเนื้อหาต่อไปนี้ ตอบเป็นภาษาไทยเท่านั้น ไม่ต้องขึ้นต้นด้วยเครื่องหมายหรืออีโมจิ ตอบมาแค่ชื่องานอย่างเดียว"
                     : "Generate a short task name, max 8 words, from the following content. Reply in English only. No emoji, no punctuation prefix. Just the task name.";

@@ -95,6 +95,25 @@ export const ConfigService = {
             return process.env.GEMINI_API_KEY;
         }
 
+        // GROQ key
+        if (key === 'googleAppsScriptUrl') {
+            return configCache[key] || process.env.GOOGLE_SCRIPT_URL || process.env.GOOGLE_APPS_SCRIPT_URL;
+        }
+
+        // googleSheetIdJobs: fallback to GOOGLE_SHEET_ID if GOOGLE_SHEET_ID_JOBS not set
+        if (key === 'googleSheetIdJobs') {
+            return configCache[key] ||
+                process.env.GOOGLE_SHEET_ID_JOBS ||
+                process.env.GOOGLE_SHEET_ID;
+        }
+
+        // googleDriveFolderIdJobs: fallback to GOOGLE_DRIVE_FOLDER_ID
+        if (key === 'googleDriveFolderIdJobs') {
+            return configCache[key] ||
+                process.env.GOOGLE_DRIVE_FOLDER_ID_JOBS ||
+                process.env.GOOGLE_DRIVE_FOLDER_ID;
+        }
+
         // Priority for others: In-memory/Sheets cache > Environment Variable
         if (configCache[key]) return configCache[key];
 
@@ -102,14 +121,14 @@ export const ConfigService = {
         const envMap: Record<keyof AppConfig, string> = {
             geminiApiKey: 'GEMINI_API_KEY',
             googleSheetId: 'GOOGLE_SHEET_ID',
-            googleSheetIdJobs: 'GOOGLE_SHEET_ID_JOBS',
+            googleSheetIdJobs: 'GOOGLE_SHEET_ID',
             googleDriveFolderId: 'GOOGLE_DRIVE_FOLDER_ID',
-            googleDriveFolderIdJobs: 'GOOGLE_DRIVE_FOLDER_ID_JOBS',
+            googleDriveFolderIdJobs: 'GOOGLE_DRIVE_FOLDER_ID',
             googleDocTemplateId: 'GOOGLE_DOC_TEMPLATE_ID',
             serviceAccountJson: 'GOOGLE_APPLICATION_CREDENTIALS_JSON',
             systemPassword: 'SYSTEM_PASSWORD',
-            users: 'SYSTEM_USERS', // JSON string of users e.g. ["Alice", "Bob"]
-            googleAppsScriptUrl: 'GOOGLE_APPS_SCRIPT_URL'
+            users: 'SYSTEM_USERS',
+            googleAppsScriptUrl: 'GOOGLE_SCRIPT_URL'
         };
 
         const envValue = process.env[envMap[key]];
@@ -119,7 +138,7 @@ export const ConfigService = {
             try {
                 return JSON.parse(envValue);
             } catch (e) {
-                return envValue.split(','); // Fallback: comma separated
+                return envValue.split(',');
             }
         }
 
