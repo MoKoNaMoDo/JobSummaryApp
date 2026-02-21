@@ -1,5 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from "dotenv";
 import { ConfigService } from "./configService";
+
+dotenv.config();
 
 export class GeminiService {
     static async analyzeSlip(fileBuffer: Buffer, mimeType: string) {

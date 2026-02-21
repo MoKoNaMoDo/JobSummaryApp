@@ -70,7 +70,7 @@ export class GoogleService {
     }
 
     // Upload Image to Google Drive via Apps Script Proxy
-    static async uploadSlip(file: { buffer: Buffer; mimetype: string; originalname?: string }, contextName: string, date: string, prefix: string = "JobSummary"): Promise<string> {
+    static async uploadSlip(file: Express.Multer.File, contextName: string, date: string, prefix: string = "JobSummary"): Promise<string> {
         try {
             // Determine target Folder ID based on context
             let folderId = prefix === "Jobs"
