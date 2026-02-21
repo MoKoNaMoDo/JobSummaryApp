@@ -9,13 +9,23 @@ async function ensureConfig() {
 export async function GET() {
     await ensureConfig();
     try {
-        const config = ConfigService.getConfig();
+        // Helper function to get config value and handle "undefined" or "null" strings
+        const getConfigValue = (key: string) => {
+            const value = ConfigService.get(key);
+            // Treat string "undefined" or "null" as truly missing
+            if (value === "undefined" || value === "null" || value === undefined || value === null) {
+                return null;
+            }
+            return value;
+        };
+
         return NextResponse.json({
             status: 'success',
             data: {
-                geminiApiKey: config.geminiApiKey || '',
-                serviceAccountJson: config.serviceAccountJson ? 'PRESENT (HIDDEN)' : '',
-                users: config.users || []
+                geminiApiKey: getConfigValue('geminiApiKey') ? 'PRESENT' : 'MISSING',
+                groqApiKey: getConfigValue('groqApiKey') ? 'PRESENT' : 'MISSING',
+                serviceAccountJson: getConfigValue('serviceAccountJson') ? 'PRESENT' : 'MISSING',
+                users: getConfigValue('users') || []
             }
         });
     } catch (error: any) {
