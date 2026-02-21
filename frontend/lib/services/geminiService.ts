@@ -60,7 +60,7 @@ export class GeminiService {
             if (!apiKey) throw new Error("Gemini API Key is missing.");
 
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
             const prompt = `
                 Analyze this daily work log entry (text note and optional image). 
@@ -115,10 +115,10 @@ export class GeminiService {
 
     static async refineText(text: string, mode: 'refine' | 'expand' | 'organize' | 'title' | 'shorten', language: 'th' | 'en' = 'th') {
         try {
-            const apiKey = process.env.GROQ_API_KEY;
-            if (!apiKey) throw new Error("Groq API Key is missing. Please set GROQ_API_KEY in .env");
+            const apiKey = ConfigService.get('groqApiKey');
+            if (!apiKey) throw new Error("Groq API Key is missing. Please set GROQ_API_KEY in ENV or config.");
 
-            const Groq = (await import('groq-sdk')).default;
+            const { Groq } = await import('groq-sdk');
             const groq = new Groq({ apiKey });
 
             const isThai = language === 'th';

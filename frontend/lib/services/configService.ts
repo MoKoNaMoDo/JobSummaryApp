@@ -11,6 +11,7 @@ export interface AppConfig {
     systemPassword?: string;
     users?: string[]; // New: List of assignees
     googleAppsScriptUrl?: string; // Image Upload Proxy Endpoint
+    groqApiKey?: string; // New: Groq API Key
 }
 
 const TAB_NAME = '_SYS_CONFIG';
@@ -100,6 +101,11 @@ export const ConfigService = {
             return configCache[key] || process.env.GOOGLE_SCRIPT_URL || process.env.GOOGLE_APPS_SCRIPT_URL;
         }
 
+        // Groq Key Priority: Environment Variable > Sheets/Cache
+        if (key === 'groqApiKey' && process.env.GROQ_API_KEY) {
+            return process.env.GROQ_API_KEY;
+        }
+
         // googleSheetIdJobs: fallback to GOOGLE_SHEET_ID if GOOGLE_SHEET_ID_JOBS not set
         if (key === 'googleSheetIdJobs') {
             return configCache[key] ||
@@ -128,7 +134,8 @@ export const ConfigService = {
             serviceAccountJson: 'GOOGLE_APPLICATION_CREDENTIALS_JSON',
             systemPassword: 'SYSTEM_PASSWORD',
             users: 'SYSTEM_USERS',
-            googleAppsScriptUrl: 'GOOGLE_SCRIPT_URL'
+            googleAppsScriptUrl: 'GOOGLE_SCRIPT_URL',
+            groqApiKey: 'GROQ_API_KEY'
         };
 
         const envValue = process.env[envMap[key]];
