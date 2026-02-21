@@ -30,6 +30,9 @@ export async function POST(req: NextRequest) {
         const projectSlug = formData.get('projectSlug') as string;
         const file = formData.get('file') as File | null;
         const assignee = formData.get('assignee') as string || 'Unassigned';
+        const taskName = formData.get('taskName') as string | null;
+        const workDate = formData.get('workDate') as string | null;
+        const status = formData.get('status') as string | null;
 
         let extractedData: any = {};
         let imageUrl = '';
@@ -47,10 +50,10 @@ export async function POST(req: NextRequest) {
         }
 
         const jobEntry = {
-            date: extractedData.date || new Date().toISOString().split('T')[0],
-            taskName: extractedData.taskName || note.substring(0, 30),
+            date: workDate || extractedData.date || new Date().toISOString().split('T')[0],
+            taskName: taskName || extractedData.taskName || note.substring(0, 30),
             assignee: assignee,
-            status: extractedData.status || 'Pending',
+            status: status || extractedData.status || 'Pending',
             description: extractedData.description || note,
             cost: extractedData.cost || 0,
             imageUrl: imageUrl
