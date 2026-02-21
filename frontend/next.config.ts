@@ -1,14 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: "https://jobsummaryapp-production.up.railway.app/api/:path*",
-      },
-    ];
-  },
+  // API routes are handled by Next.js serverless functions (no proxy needed)
+  serverExternalPackages: ['googleapis'],
 };
 
 export default nextConfig;
