@@ -115,8 +115,11 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
         setGeneratingTitleIds(prev => ({ ...prev, [id]: true }));
         try {
             const res = await jobService.refineText(note, 'title', aiLang);
-            if (res.status === 'success') {
-                updateEntry(id, { taskName: res.data });
+            // Handle both {status: 'success', data: '...'} and raw string response
+            const titleInput = res.status === 'success' ? res.data : (typeof res === 'string' ? res : null);
+
+            if (titleInput) {
+                updateEntry(id, { taskName: titleInput });
                 toast.success('สร้างชื่องานเรียบร้อยแล้ว ✨');
             }
         } catch (error: any) {
@@ -141,8 +144,11 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
         setRefiningIds(prev => ({ ...prev, [id]: true }));
         try {
             const res = await jobService.refineText(text, mode, aiLang);
-            if (res.status === 'success') {
-                updateEntry(id, { note: res.data });
+            // Handle both {status: 'success', data: '...'} and raw string response
+            const refinedContent = res.status === 'success' ? res.data : (typeof res === 'string' ? res : null);
+
+            if (refinedContent) {
+                updateEntry(id, { note: refinedContent });
                 toast.success(t('addJob.aiRefining'));
             }
         } catch (error: any) {
