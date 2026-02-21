@@ -17,6 +17,7 @@ import JobCard from "@/components/JobCard";
 import ViewJobDialog from "@/components/ViewJobDialog";
 import EditJobDialog from "@/components/EditJobDialog";
 import DeleteJobDialog from "@/components/DeleteJobDialog";
+import CompleteWorkLogDialog from "@/components/CompleteWorkLogDialog";
 import type { Job } from "@/components/JobCard";
 import { ArrowLeft } from "lucide-react";
 
@@ -57,6 +58,7 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
   const [isDeletingDialogOpen, setIsDeletingDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
+  const [completeWorkLogJob, setCompleteWorkLogJob] = useState<Job | null>(null);
   const { t } = useLanguage();
 
   const [mounted, setMounted] = useState(false);
@@ -132,6 +134,23 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
     }
   };
 
+  const handleCompleteJob = async (job: Job, workLog: string) => {
+    try {
+      if (!job.sheetName || !job.id) return;
+      // Save work log description + set to Completed
+      await jobService.updateJob({ ...job, description: workLog, status: 'Completed' } as unknown as Record<string, unknown>);
+      setJobs(jobs.map(j =>
+        j.id === job.id && j.sheetName === job.sheetName
+          ? { ...j, description: workLog, status: 'Completed' }
+          : j
+      ));
+      setCompleteWorkLogJob(null);
+      toast.success('✅ บันทึกงานเสร็จสิ้นแล้ว!');
+    } catch {
+      toast.error('ไม่สามารถบันทึกงานได้ กรุณาลองใหม่');
+    }
+  };
+
   const handleDelete = async () => {
     if (!jobToDelete) return;
     try {
@@ -193,6 +212,7 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
             onEdit={(j) => { setEditingJob(j); setIsEditDialogOpen(true); }}
             onDelete={(j) => { setJobToDelete(j); setIsDeletingDialogOpen(true); }}
             onStatusChange={handleStatusChange}
+            onComplete={(j) => setCompleteWorkLogJob(j)}
           />
         ))}
         {items.length === 0 && (
@@ -342,6 +362,14 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
         t={t}
         onConfirm={handleDelete}
         onClose={() => setIsDeletingDialogOpen(false)}
+      />
+
+      <CompleteWorkLogDialog
+        job={completeWorkLogJob}
+        open={!!completeWorkLogJob}
+        t={t}
+        onComplete={handleCompleteJob}
+        onClose={() => setCompleteWorkLogJob(null)}
       />
 
       <ViewJobDialog

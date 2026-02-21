@@ -80,8 +80,8 @@ export const jobService = {
         const response = await api.delete("/jobs", { data: { id, sheetName } });
         return response.data;
     },
-    refineText: async (text: string, mode: 'refine' | 'expand' | 'organize') => {
-        const response = await api.post("/ai/refine", { text, mode });
+    refineText: async (text: string, mode: 'refine' | 'expand' | 'organize' | 'title' | 'shorten', language: 'th' | 'en' = 'th') => {
+        const response = await api.post("/ai/refine", { text, mode, language });
         return response.data;
     }
 };

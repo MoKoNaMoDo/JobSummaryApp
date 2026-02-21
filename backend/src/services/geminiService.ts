@@ -117,7 +117,7 @@ export class GeminiService {
         }
     }
 
-    static async refineText(text: string, mode: 'refine' | 'expand' | 'organize') {
+    static async refineText(text: string, mode: 'refine' | 'expand' | 'organize' | 'title' | 'shorten', language: 'th' | 'en' = 'th') {
         try {
             const apiKey = process.env.GROQ_API_KEY;
             if (!apiKey) throw new Error("Groq API Key is missing. Please set GROQ_API_KEY in .env");
@@ -125,20 +125,67 @@ export class GeminiService {
             const Groq = (await import('groq-sdk')).default;
             const groq = new Groq({ apiKey });
 
+            const isThai = language === 'th';
+
             let instruction = "";
-            if (mode === 'refine') {
-                instruction = "Refine this developer work log into professional, formal, and concise language. Correct grammar and use industry-standard terminology.";
-            } else if (mode === 'expand') {
-                instruction = "Expand this developer work log with additional likely technical details, best practices involved, or potential impacts. Make it detailed for a technical report.";
-            } else if (mode === 'organize') {
-                instruction = "Organize this work log into a clear, structured list with bullet points. Group related items and make it easy to scan.";
+            if (mode === 'title') {
+                // Generate short task name only
+                const titleLang = isThai
+                    ? "สร้างชื่องานสั้นๆ กระชับ ไม่เกิน 8 คำ จากเนื้อหาต่อไปนี้ ตอบเป็นภาษาไทยเท่านั้น ไม่ต้องขึ้นต้นด้วยเครื่องหมายหรืออีโมจิ ตอบมาแค่ชื่องานอย่างเดียว"
+                    : "Generate a short task name, max 8 words, from the following content. Reply in English only. No emoji, no punctuation prefix. Just the task name.";
+                const completion = await groq.chat.completions.create({
+                    messages: [
+                        { role: "system", content: titleLang },
+                        { role: "user", content: text }
+                    ],
+                    model: "llama-3.1-8b-instant",
+                    temperature: 0.4,
+                    max_tokens: 64,
+                });
+                return completion.choices[0]?.message?.content?.trim() ?? text;
             }
+
+            if (mode === 'refine') {
+                instruction = isThai
+                    ? "ปรับแต่งข้อความบันทึกงานต่อไปนี้ให้เป็นภาษาที่เป็นทางการ กระชับ และเป็นมืออาชีพ แก้ไขไวยากรณ์และใช้คำศัพท์ที่เหมาะสม"
+                    : "Refine this work log into professional, formal, and concise language. Correct grammar and use industry-standard terminology.";
+            } else if (mode === 'expand') {
+                instruction = isThai
+                    ? "ขยายความข้อความบันทึกงานต่อไปนี้โดยเพิ่มรายละเอียดทางเทคนิค วิธีการที่ใช้ และผลกระทบที่เกิดขึ้น ให้เหมาะสำหรับรายงานประจำวัน"
+                    : "Expand this work log with additional technical details, methods used, and potential impacts. Make it detailed for a daily progress report.";
+            } else if (mode === 'organize') {
+                instruction = isThai
+                    ? "จัดระเบียบข้อความบันทึกงานต่อไปนี้ให้อยู่ในรูปแบบรายการที่ชัดเจน จัดกลุ่มงานที่เกี่ยวข้องและเรียงลำดับตามความสำคัญ"
+                    : "Organize this work log into a clear, structured list. Group related tasks and order by priority.";
+            } else if (mode === 'shorten') {
+                instruction = isThai
+                    ? "สรุปข้อความต่อไปนี้ให้สั้น กระชับ เข้าใจง่าย ไม่เกิน 3 บรรทัด เลือกเฟ้นเฉพาะส่วนที่สำคัญที่สุด"
+                    : "Summarize this work log into a short, easy-to-understand version. Max 3 lines. Keep only the most important points.";
+            }
+
+            const templateInstruction = isThai
+                ? `ตอบในรูปแบบรายงานงานรายวันดังนี้:
+✅ งานที่ทำ:
+- [รายละเอียดงาน]
+
+💡 หมายเหตุ / ผลลัพธ์:
+- [บันทึกเพิ่มเติม หากมี]
+
+ตอบเป็นภาษาไทยเท่านั้น ไม่ต้องใส่วันที่ ไม่ต้องใส่ markdown code block`
+                : `Reply in this daily work log format:
+✅ Tasks Completed:
+- [Task detail]
+
+💡 Notes / Results:
+- [Additional notes if any]
+
+Reply in English only. Do not include the date. No markdown code blocks.`;
 
             const completion = await groq.chat.completions.create({
                 messages: [
                     {
                         role: "system",
-                        content: `You are a professional technical writer. ${instruction} Return ONLY the refined text, no explanations or markdown code blocks.`
+                        content: `You are a professional technical writer and daily work log assistant. ${instruction}\n\n${templateInstruction}`
                     },
                     {
                         role: "user",

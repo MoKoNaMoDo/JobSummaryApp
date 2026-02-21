@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { User, Calendar, MoreVertical, Edit2, Trash2, Camera } from "lucide-react";
+import { User, Calendar, MoreVertical, Edit2, Trash2, Camera, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -30,6 +30,7 @@ interface JobCardProps {
     onEdit: (job: Job) => void;
     onDelete: (job: Job) => void;
     onStatusChange: (job: Job, status: string) => void;
+    onComplete?: (job: Job) => void;
 }
 
 const item = {
@@ -37,7 +38,7 @@ const item = {
     show: { y: 0, opacity: 1 }
 };
 
-export default function JobCard({ job, t, getDriveImageUrl, onView, onEdit, onDelete, onStatusChange }: JobCardProps) {
+export default function JobCard({ job, t, getDriveImageUrl, onView, onEdit, onDelete, onStatusChange, onComplete }: JobCardProps) {
     const imageUrl = getDriveImageUrl(job.imageUrl || job.slipUrl);
 
     return (
@@ -112,6 +113,16 @@ export default function JobCard({ job, t, getDriveImageUrl, onView, onEdit, onDe
                             ) : null}
                         </div>
                     </div>
+                    {/* Complete button for non-completed jobs */}
+                    {job.status !== 'Completed' && onComplete && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onComplete(job); }}
+                            className="w-full flex items-center justify-center gap-1.5 text-[11px] font-medium text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg py-1.5 mt-1 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            ✅ บันทึกงานที่เสร็จ
+                        </button>
+                    )}
                 </CardContent>
             </Card>
         </motion.div>

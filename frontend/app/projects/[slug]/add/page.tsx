@@ -3,7 +3,7 @@
 import { use } from "react";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Upload, X, Loader2, User, Activity, FileText, Plus, Trash2, Camera, Send } from "lucide-react";
+import { Sparkles, Upload, X, Loader2, User, Activity, FileText, Plus, Trash2, Camera, Send, Calendar, Languages } from "lucide-react";
 import { toast } from "sonner";
 import { jobService } from "@/lib/api";
 
@@ -25,6 +25,7 @@ import { useLanguage } from "@/components/LanguageProvider";
 interface JobEntry {
     id: string;
     taskName: string;
+    workDate: string; // Date for this entry
     note: string;
     assignee: string;
     status: "Pending" | "In Progress" | "Completed";
@@ -34,9 +35,12 @@ interface JobEntry {
     isSubmitted: boolean;
 }
 
+const todayISO = () => new Date().toISOString().split('T')[0];
+
 const createEmptyEntry = (): JobEntry => ({
     id: crypto.randomUUID(),
     taskName: "",
+    workDate: todayISO(),
     note: "",
     assignee: "",
     status: "Pending",
@@ -53,11 +57,16 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
     const [users, setUsers] = useState<string[]>([]);
     const [isSubmittingAll, setIsSubmittingAll] = useState(false);
     const [refiningIds, setRefiningIds] = useState<Record<string, boolean>>({});
-
+    const [generatingTitleIds, setGeneratingTitleIds] = useState<Record<string, boolean>>({});
+    const [aiLang, setAiLang] = useState<'th' | 'en'>('th');
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
+        // Load AI language preference from localStorage
+        const savedLang = localStorage.getItem('ai_lang') as 'th' | 'en' | null;
+        if (savedLang) setAiLang(savedLang);
+
         const fetchUsers = async () => {
             try {
                 const res = await jobService.getConfig();
@@ -98,7 +107,32 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
         updateEntry(id, { file: null, preview: null });
     };
 
-    const handleRefine = async (id: string, text: string, mode: 'refine' | 'expand' | 'organize') => {
+    const handleGenerateTitle = async (id: string, note: string) => {
+        if (!note || note.length < 5) {
+            toast.error('กรุณาพิมพ์คำอธิบายงานก่อนก่อนใช้ Gen ชื่อ');
+            return;
+        }
+        setGeneratingTitleIds(prev => ({ ...prev, [id]: true }));
+        try {
+            const res = await jobService.refineText(note, 'title', aiLang);
+            if (res.status === 'success') {
+                updateEntry(id, { taskName: res.data });
+                toast.success('สร้างชื่องานเรียบร้อยแล้ว ✨');
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'ไม่สามารถสร้างชื่องานได้');
+        } finally {
+            setGeneratingTitleIds(prev => ({ ...prev, [id]: false }));
+        }
+    };
+
+    const toggleLang = () => {
+        const next = aiLang === 'th' ? 'en' : 'th';
+        setAiLang(next);
+        localStorage.setItem('ai_lang', next);
+    };
+
+    const handleRefine = async (id: string, text: string, mode: 'refine' | 'expand' | 'organize' | 'shorten') => {
         if (!text || text.length < 5) {
             toast.error(t('addJob.validationImageOrNote'));
             return;
@@ -106,7 +140,7 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
 
         setRefiningIds(prev => ({ ...prev, [id]: true }));
         try {
-            const res = await jobService.refineText(text, mode);
+            const res = await jobService.refineText(text, mode, aiLang);
             if (res.status === 'success') {
                 updateEntry(id, { note: res.data });
                 toast.success(t('addJob.aiRefining'));
@@ -132,6 +166,7 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
             const formData = new FormData();
             if (entry.taskName) formData.append("taskName", entry.taskName);
             formData.append("note", entry.note);
+            formData.append("workDate", entry.workDate || todayISO());
             if (entry.assignee) formData.append("assignee", entry.assignee);
             if (entry.status) formData.append("status", entry.status);
             if (entry.file) formData.append("image", entry.file);
@@ -201,9 +236,18 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
                 <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
                     {t('addJob.title')}
                 </h1>
-                <p className="text-slate-400 text-sm">
-                    {t('addJob.subtitle')}
-                </p>
+                <p className="text-slate-400 text-sm">{t('addJob.subtitle')}</p>
+                {/* AI Language Toggle */}
+                <button
+                    onClick={toggleLang}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all mt-1"
+                    style={aiLang === 'th'
+                        ? { background: 'rgba(99,102,241,0.12)', borderColor: 'rgba(99,102,241,0.3)', color: '#a5b4fc' }
+                        : { background: 'rgba(16,185,129,0.12)', borderColor: 'rgba(16,185,129,0.3)', color: '#6ee7b7' }}
+                >
+                    <Languages className="w-3 h-3" />
+                    AI: {aiLang === 'th' ? '🇹🇭 ภาษาไทย' : '🇬🇧 English'}
+                </button>
             </motion.div>
 
             {/* Entry Cards */}
@@ -299,17 +343,47 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
                                     </AnimatePresence>
                                 </div>
 
-                                {/* Task Name */}
-                                <div className="space-y-1.5">
-                                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                                        <FileText className="w-3.5 h-3.5" /> {t('addJob.taskName')}
-                                    </label>
-                                    <Input
-                                        placeholder={t('addJob.placeholderTaskName')}
-                                        value={entry.taskName}
-                                        onChange={(e) => updateEntry(entry.id, { taskName: e.target.value })}
-                                        className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-500 rounded-xl h-10"
-                                    />
+                                {/* Task Name + Work Date Row */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                                            <FileText className="w-3.5 h-3.5" /> {t('addJob.taskName')}
+                                        </label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            <Input
+                                                placeholder={t('addJob.placeholderTaskName')}
+                                                value={entry.taskName}
+                                                onChange={(e) => updateEntry(entry.id, { taskName: e.target.value })}
+                                                className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-500 rounded-xl h-10 flex-1"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleGenerateTitle(entry.id, entry.note)}
+                                                disabled={generatingTitleIds[entry.id] || !entry.note}
+                                                title="สร้างชื่องานอัตโนมัติจาก AI"
+                                                className="h-10 px-2.5 shrink-0 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 rounded-xl transition-all"
+                                            >
+                                                {generatingTitleIds[entry.id] ? (
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                ) : (
+                                                    <><Sparkles className="w-3.5 h-3.5 mr-1" /><span className="text-[10px] font-semibold">Gen</span></>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                                            <Calendar className="w-3.5 h-3.5" /> วันที่ทำงาน
+                                        </label>
+                                        <Input
+                                            type="date"
+                                            value={entry.workDate}
+                                            onChange={(e) => updateEntry(entry.id, { workDate: e.target.value })}
+                                            className="bg-slate-800/60 border-slate-600/50 text-white rounded-xl h-10"
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Assignee + Status Row */}
@@ -357,11 +431,12 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
                                 <div className="space-y-1.5">
                                     <div className="flex items-center justify-between">
                                         <label className="text-xs font-medium text-slate-400">{t('addJob.workDescription')}</label>
-                                        <div className="flex gap-1.5">
+                                        <div className="flex flex-wrap gap-1.5">
                                             {[
                                                 { mode: 'refine' as const, label: t('addJob.aiRefine'), icon: Sparkles },
                                                 { mode: 'expand' as const, label: t('addJob.aiExpand'), icon: Plus },
                                                 { mode: 'organize' as const, label: t('addJob.aiOrganize'), icon: Activity },
+                                                { mode: 'shorten' as const, label: aiLang === 'th' ? 'สั้นลง' : 'Shorten', icon: FileText },
                                             ].map((btn) => (
                                                 <Button
                                                     key={btn.mode}

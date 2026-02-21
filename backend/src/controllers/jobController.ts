@@ -130,17 +130,18 @@ export const deleteJob = async (req: Request, res: Response) => {
 
 export const refineJobText = async (req: Request, res: Response) => {
     try {
-        const { text, mode } = req.body;
+        const { text, mode, language } = req.body;
+        const lang = language === 'en' ? 'en' : 'th';
         if (!text) {
             res.status(400).json({ status: 'error', message: 'Text is required' });
             return;
         }
-        if (!['refine', 'expand', 'organize'].includes(mode)) {
+        if (!['refine', 'expand', 'organize', 'title', 'shorten'].includes(mode)) {
             res.status(400).json({ status: 'error', message: 'Invalid mode' });
             return;
         }
 
-        const refined = await GeminiService.refineText(text, mode as any);
+        const refined = await GeminiService.refineText(text, mode as any, lang);
         res.json({ status: 'success', data: refined });
     } catch (error: any) {
         console.error("AI Refine Controller Error:", error);
