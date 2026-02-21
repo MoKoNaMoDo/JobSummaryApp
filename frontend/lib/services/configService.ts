@@ -149,6 +149,7 @@ export const ConfigService = {
             }
         }
 
+        if (envValue === "undefined" || envValue === "null") return null;
         return envValue;
     }
 };
