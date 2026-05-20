@@ -46,7 +46,7 @@ const getAuth = () => {
         });
     }
 
-    // 3. Last Resort: Check local file (Only if exists, to avoid crash)
+    // 4. Last Resort: local service-account.json for dev only (gitignored)
     const localKeyPath = path.join(__dirname, '../../service-account.json');
     try {
         // Using fs inside try-catch just to be safe, though GoogleAuth might handle it.
