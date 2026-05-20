@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { jobService } from "@/lib/api";
-import type { Job } from "./JobCard";
+import type { Job } from "@/components/JobCard";
 
 interface EditJobDialogProps {
     job: Job | null;

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useLanguage } from "./LanguageProvider";
-import { Button } from "./ui/button";
+import { useLanguage } from "@/components/LanguageProvider";
+import { Button } from "@/components/ui/button";
 
 export function LanguageSwitcher() {
     const { language, setLanguage } = useLanguage();
