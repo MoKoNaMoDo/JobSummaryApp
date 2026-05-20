@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { jobService } from "@/lib/api";
-import type { Job } from "@/components/JobCard";
+import type { Job } from "@/components/JobCard/JobCard";
 
 interface CompleteWorkLogDialogProps {
     job: Job | null;

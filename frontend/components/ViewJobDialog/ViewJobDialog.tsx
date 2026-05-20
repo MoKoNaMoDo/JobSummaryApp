@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getStatusColors, ALL_STATUSES } from "@/lib/statusColors";
-import type { Job } from "@/components/JobCard";
+import type { Job } from "@/components/JobCard/JobCard";
 
 interface ViewJobDialogProps {
     job: Job | null;

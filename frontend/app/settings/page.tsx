@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useLanguage } from "@/components/LanguageProvider";
+import { useLanguage } from "@/components/LanguageProvider/LanguageProvider";
 
 export default function SettingsPage() {
     const { t, language, setLanguage } = useLanguage();

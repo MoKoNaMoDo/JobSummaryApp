@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { FolderKanban, PlusCircle, Settings } from "lucide-react";
 
-import { useLanguage } from "@/components/LanguageProvider";
+import { useLanguage } from "@/components/LanguageProvider/LanguageProvider";
 
 const navItems = [
     { href: "/", label: "projects.hubTitle", icon: FolderKanban },

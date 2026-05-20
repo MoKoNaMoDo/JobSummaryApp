@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google"; // Correct import if it was Geist_Mono
-import { Navbar } from "@/components/layout/Navbar";
 import { Toaster } from "@/components/ui/sonner";
+import { LanguageProvider } from "@/components/LanguageProvider/LanguageProvider";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher/LanguageSwitcher";
+import { Navbar } from "@/components/layout/Navbar/Navbar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,9 +15,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-import { LanguageProvider } from "@/components/LanguageProvider";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export const metadata: Metadata = {
   title: "Work Log App",
