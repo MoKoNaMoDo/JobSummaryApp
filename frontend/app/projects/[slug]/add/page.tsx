@@ -10,7 +10,7 @@ import AddJobEntryCard from "@/components/pages/add-job/AddJobEntryCard/AddJobEn
 import AddJobHeader from "@/components/pages/add-job/AddJobHeader/AddJobHeader";
 import AddJobSkeleton from "@/components/pages/add-job/AddJobSkeleton/AddJobSkeleton";
 import AddJobSubmitBar from "@/components/pages/add-job/AddJobSubmitBar/AddJobSubmitBar";
-import { useLanguage } from "@/components/LanguageProvider/LanguageProvider";
+import { useLanguage } from "@/components/features/LanguageProvider/LanguageProvider";
 import { createEmptyJobEntry, todayISO, type JobEntry } from "@/lib/jobs/jobEntry";
 
 export default function AddJobPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -85,8 +85,9 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
                 updateEntry(id, { taskName: titleInput });
                 toast.success('สร้างชื่องานเรียบร้อยแล้ว ✨');
             }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'ไม่สามารถสร้างชื่องานได้');
+        } catch (error: unknown) {
+            const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            toast.error(msg || 'ไม่สามารถสร้างชื่องานได้');
         } finally {
             setGeneratingTitleIds(prev => ({ ...prev, [id]: false }));
         }
@@ -114,9 +115,9 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
                 updateEntry(id, { note: refinedContent });
                 toast.success(t('addJob.aiRefining'));
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Refine Error:", error);
-            const serverMessage = error.response?.data?.message;
+            const serverMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
             toast.error(serverMessage || t('addJob.toastError'));
         } finally {
             setRefiningIds(prev => ({ ...prev, [id]: false }));

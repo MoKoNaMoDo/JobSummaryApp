@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Sparkles, Plus, Activity, FileText, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { jobService } from "@/lib/api";
-import type { Job } from "@/components/JobCard/JobCard";
+import type { Job } from "@/components/features/JobCard/JobCard";
 
 interface CompleteWorkLogDialogProps {
     job: Job | null;
@@ -50,8 +50,8 @@ export default function CompleteWorkLogDialog({ job, open, t, onComplete, onClos
                 setWorkLog(res.data);
                 toast.success('AI ปรับแต่งเสร็จแล้ว ✨');
             }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'AI ไม่สามารถปรับแต่งได้');
+        } catch {
+            toast.error('AI ไม่สามารถปรับแต่งได้');
         } finally {
             setRefining(false);
         }

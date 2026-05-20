@@ -5,9 +5,9 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { FolderKanban, PlusCircle, Settings } from "lucide-react";
+import { FolderKanban, Settings } from "lucide-react";
 
-import { useLanguage } from "@/components/LanguageProvider/LanguageProvider";
+import { useLanguage } from "@/components/features/LanguageProvider/LanguageProvider";
 
 const navItems = [
     { href: "/", label: "projects.hubTitle", icon: FolderKanban },
@@ -19,9 +19,8 @@ export function Navbar() {
     const { t } = useLanguage();
     const [mounted, setMounted] = useState(false);
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => { setMounted(true); }, []);
 
     // Determine active state - project pages are under "/"
     const getIsActive = (href: string) => {

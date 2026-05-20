@@ -43,7 +43,7 @@ export class GeminiService {
 
             try {
                 return JSON.parse(cleanText);
-            } catch (parseError) {
+            } catch {
                 console.error("Failed to parse Gemini response:", cleanText);
                 throw new Error("Invalid format returned by AI");
             }
@@ -82,7 +82,7 @@ export class GeminiService {
                 IMPORTANT: Return ONLY raw JSON. No markdown.
             `;
 
-            const parts: any[] = [prompt];
+            const parts: Array<string | { inlineData: { data: string; mimeType: string } }> = [prompt];
 
             if (fileBuffer && mimeType) {
                 parts.push({
@@ -193,8 +193,8 @@ Reply in English only. Do not include the date. No markdown code blocks.`;
             });
 
             return completion.choices[0]?.message?.content?.trim() ?? text;
-        } catch (error: any) {
-            console.error("GeminiService.refineText (Groq) Error:", error.message);
+        } catch (error: unknown) {
+            console.error("GeminiService.refineText (Groq) Error:", error instanceof Error ? error.message : error);
             throw error;
         }
     }

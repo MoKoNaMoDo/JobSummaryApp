@@ -1,10 +1,11 @@
+import type { Server } from 'http';
 import app from './app';
 import { ConfigService } from './services/configService';
 
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
-    let server: any;
+    let server: Server | undefined;
     const shutdown = () => {
         console.log("Shutting down server...");
         if (server) {

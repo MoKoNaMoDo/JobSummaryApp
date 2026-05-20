@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ConfigService } from '@/lib/services/configService';
-
-let configLoaded = false;
-async function ensureConfig() {
-    if (!configLoaded) { await ConfigService.load(); configLoaded = true; }
-}
+import { ensureConfig, errMsg } from '@/lib/api-utils';
 
 export async function POST(req: NextRequest) {
     await ensureConfig();
@@ -14,10 +10,9 @@ export async function POST(req: NextRequest) {
 
         if (password === systemPassword) {
             return NextResponse.json({ status: 'success' });
-        } else {
-            return NextResponse.json({ status: 'error', message: 'Invalid password' }, { status: 401 });
         }
-    } catch (error: any) {
-        return NextResponse.json({ status: 'error', message: error.message }, { status: 500 });
+        return NextResponse.json({ status: 'error', message: 'Invalid password' }, { status: 401 });
+    } catch (error: unknown) {
+        return NextResponse.json({ status: 'error', message: errMsg(error) }, { status: 500 });
     }
 }

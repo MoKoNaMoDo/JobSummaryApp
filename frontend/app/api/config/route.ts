@@ -1,35 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ConfigService, AppConfig } from '@/lib/services/configService';
-
-let configLoaded = false;
-async function ensureConfig() {
-    if (!configLoaded) { await ConfigService.load(); configLoaded = true; }
-}
+import { ensureConfig, errMsg } from '@/lib/api-utils';
 
 export async function GET() {
     await ensureConfig();
     try {
-        // Helper function to get config value and handle "undefined" or "null" strings
-        const getConfigValue = (key: string) => {
-            const value = ConfigService.get(key as keyof AppConfig);
-            // Treat string "undefined" or "null" as truly missing
-            if (value === "undefined" || value === "null" || value === undefined || value === null) {
-                return null;
-            }
-            return value;
+        const safeGet = (key: keyof AppConfig) => {
+            const v = ConfigService.get(key);
+            return v === 'undefined' || v === 'null' || v == null ? null : v;
         };
 
         return NextResponse.json({
             status: 'success',
             data: {
-                geminiApiKey: getConfigValue('geminiApiKey') ? 'PRESENT' : 'MISSING',
-                groqApiKey: getConfigValue('groqApiKey') ? 'PRESENT' : 'MISSING',
-                serviceAccountJson: getConfigValue('serviceAccountJson') ? 'PRESENT' : 'MISSING',
-                users: getConfigValue('users') || []
-            }
+                geminiApiKey: safeGet('geminiApiKey') ? 'PRESENT' : 'MISSING',
+                groqApiKey: safeGet('groqApiKey') ? 'PRESENT' : 'MISSING',
+                serviceAccountJson: safeGet('serviceAccountJson') ? 'PRESENT' : 'MISSING',
+                users: safeGet('users') ?? [],
+            },
         });
-    } catch (error: any) {
-        return NextResponse.json({ status: 'error', message: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return NextResponse.json({ status: 'error', message: errMsg(error) }, { status: 500 });
     }
 }
 
@@ -39,7 +30,7 @@ export async function POST(req: NextRequest) {
         const newConfig = await req.json();
         const success = await ConfigService.saveConfig(newConfig);
         return NextResponse.json({ status: success ? 'success' : 'error' });
-    } catch (error: any) {
-        return NextResponse.json({ status: 'error', message: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return NextResponse.json({ status: 'error', message: errMsg(error) }, { status: 500 });
     }
 }

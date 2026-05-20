@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google"; // Correct import if it was Geist_Mono
 import { Toaster } from "@/components/ui/sonner";
-import { LanguageProvider } from "@/components/LanguageProvider/LanguageProvider";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher/LanguageSwitcher";
+import { LanguageProvider } from "@/components/features/LanguageProvider/LanguageProvider";
+import { LanguageSwitcher } from "@/components/features/LanguageSwitcher/LanguageSwitcher";
 import { Navbar } from "@/components/layout/Navbar/Navbar";
 import "./globals.css";
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useLanguage } from "@/components/LanguageProvider/LanguageProvider";
+import { useLanguage } from "@/components/features/LanguageProvider/LanguageProvider";
 
 const COLORS = [
     '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',

@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleService } from '@/lib/services/googleService';
-import { ConfigService } from '@/lib/services/configService';
-
-let configLoaded = false;
-async function ensureConfig() {
-    if (!configLoaded) { await ConfigService.load(); configLoaded = true; }
-}
+import { ensureConfig, errMsg } from '@/lib/api-utils';
 
 export async function PATCH(req: NextRequest) {
     await ensureConfig();
@@ -13,7 +8,7 @@ export async function PATCH(req: NextRequest) {
         const { id, sheetName, status } = await req.json();
         const result = await GoogleService.updateRowStatus(sheetName, id, status, 'Jobs');
         return NextResponse.json({ status: 'success', data: result });
-    } catch (error: any) {
-        return NextResponse.json({ status: 'error', message: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return NextResponse.json({ status: 'error', message: errMsg(error) }, { status: 500 });
     }
 }

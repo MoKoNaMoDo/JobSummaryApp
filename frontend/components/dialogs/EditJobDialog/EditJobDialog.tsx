@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { jobService } from "@/lib/api";
-import type { Job } from "@/components/JobCard/JobCard";
+import type { Job } from "@/components/features/JobCard/JobCard";
 
 interface EditJobDialogProps {
     job: Job | null;
@@ -51,8 +51,8 @@ export default function EditJobDialog({ job, open, users, saving, t, onJobChange
                 onJobChange({ ...job, description: res.data });
                 toast.success('AI ปรับแต่งเสร็จแล้ว ✨');
             }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'AI ไม่สามารถปรับแต่งได้');
+        } catch {
+            toast.error('AI ไม่สามารถปรับแต่งได้');
         } finally {
             setRefining(false);
         }
@@ -70,8 +70,8 @@ export default function EditJobDialog({ job, open, users, saving, t, onJobChange
                 onJobChange({ ...job, taskName: res.data });
                 toast.success('สร้างชื่องานเรียบร้อยแล้ว ✨');
             }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'ไม่สามารถสร้างชื่องานได้');
+        } catch {
+            toast.error('ไม่สามารถสร้างชื่องานได้');
         } finally {
             setGeneratingTitle(false);
         }

@@ -8,7 +8,7 @@ import { jobService } from "@/lib/api";
 import AddJobEntryCard from "@/components/pages/add-job/AddJobEntryCard/AddJobEntryCard";
 import AddJobHeader from "@/components/pages/add-job/AddJobHeader/AddJobHeader";
 import AddJobSubmitBar from "@/components/pages/add-job/AddJobSubmitBar/AddJobSubmitBar";
-import { useLanguage } from "@/components/LanguageProvider/LanguageProvider";
+import { useLanguage } from "@/components/features/LanguageProvider/LanguageProvider";
 import { createEmptyJobEntry, type JobEntry } from "@/lib/jobs/jobEntry";
 
 export default function AddJobPage() {

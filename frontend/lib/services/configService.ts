@@ -19,6 +19,39 @@ const TAB_NAME = '_SYS_CONFIG';
 // Simple in-memory cache
 let configCache: AppConfig = {};
 
+function getConfigValue(key: 'users'): string[] | undefined;
+function getConfigValue(key: Exclude<keyof AppConfig, 'users'>): string | null | undefined;
+function getConfigValue(key: keyof AppConfig): string | string[] | null | undefined;
+function getConfigValue(key: keyof AppConfig): string | string[] | null | undefined {
+    if (key === 'geminiApiKey' && process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+    if (key === 'googleAppsScriptUrl') return configCache[key] || process.env.GOOGLE_SCRIPT_URL || process.env.GOOGLE_APPS_SCRIPT_URL;
+    if (key === 'groqApiKey' && process.env.GROQ_API_KEY) return process.env.GROQ_API_KEY;
+    if (key === 'googleSheetIdJobs') return configCache[key] || process.env.GOOGLE_SHEET_ID_JOBS || process.env.GOOGLE_SHEET_ID;
+    if (key === 'googleDriveFolderIdJobs') return configCache[key] || process.env.GOOGLE_DRIVE_FOLDER_ID_JOBS || process.env.GOOGLE_DRIVE_FOLDER_ID;
+    if (configCache[key]) return configCache[key];
+
+    const envMap: Record<keyof AppConfig, string> = {
+        geminiApiKey: 'GEMINI_API_KEY',
+        googleSheetId: 'GOOGLE_SHEET_ID',
+        googleSheetIdJobs: 'GOOGLE_SHEET_ID',
+        googleDriveFolderId: 'GOOGLE_DRIVE_FOLDER_ID',
+        googleDriveFolderIdJobs: 'GOOGLE_DRIVE_FOLDER_ID',
+        googleDocTemplateId: 'GOOGLE_DOC_TEMPLATE_ID',
+        serviceAccountJson: 'GOOGLE_APPLICATION_CREDENTIALS_JSON',
+        systemPassword: 'SYSTEM_PASSWORD',
+        users: 'SYSTEM_USERS',
+        googleAppsScriptUrl: 'GOOGLE_SCRIPT_URL',
+        groqApiKey: 'GROQ_API_KEY',
+    };
+
+    const envValue = process.env[envMap[key]];
+    if (key === 'users' && envValue) {
+        try { return JSON.parse(envValue); } catch { return envValue.split(','); }
+    }
+    if (envValue === 'undefined' || envValue === 'null') return null;
+    return envValue;
+}
+
 export const ConfigService = {
     /**
      * Initializes the config by loading from Google Sheets.
@@ -40,7 +73,7 @@ export const ConfigService = {
             }
 
             // Mapped from Key-Value rows (skip header)
-            const loadedConfig: any = {};
+            const loadedConfig: Record<string, unknown> = {};
             rows.slice(1).forEach(row => {
                 const [key, value] = row;
                 if (key) {
@@ -55,7 +88,7 @@ export const ConfigService = {
                 }
             });
 
-            configCache = loadedConfig;
+            configCache = loadedConfig as AppConfig;
             console.log("Config loaded from Google Sheets ✅");
         } catch (error) {
             console.error("Failed to load config from Sheets:", error);
@@ -90,66 +123,5 @@ export const ConfigService = {
         }
     },
 
-    get: (key: keyof AppConfig): any => {
-        // AI Key Priority: Environment Variable > Sheets/Cache (for security/stability)
-        if (key === 'geminiApiKey' && process.env.GEMINI_API_KEY) {
-            return process.env.GEMINI_API_KEY;
-        }
-
-        // GROQ key
-        if (key === 'googleAppsScriptUrl') {
-            return configCache[key] || process.env.GOOGLE_SCRIPT_URL || process.env.GOOGLE_APPS_SCRIPT_URL;
-        }
-
-        // Groq Key Priority: Environment Variable > Sheets/Cache
-        if (key === 'groqApiKey' && process.env.GROQ_API_KEY) {
-            return process.env.GROQ_API_KEY;
-        }
-
-        // googleSheetIdJobs: fallback to GOOGLE_SHEET_ID if GOOGLE_SHEET_ID_JOBS not set
-        if (key === 'googleSheetIdJobs') {
-            return configCache[key] ||
-                process.env.GOOGLE_SHEET_ID_JOBS ||
-                process.env.GOOGLE_SHEET_ID;
-        }
-
-        // googleDriveFolderIdJobs: fallback to GOOGLE_DRIVE_FOLDER_ID
-        if (key === 'googleDriveFolderIdJobs') {
-            return configCache[key] ||
-                process.env.GOOGLE_DRIVE_FOLDER_ID_JOBS ||
-                process.env.GOOGLE_DRIVE_FOLDER_ID;
-        }
-
-        // Priority for others: In-memory/Sheets cache > Environment Variable
-        if (configCache[key]) return configCache[key];
-
-        // Map config keys to Env vars for fallback
-        const envMap: Record<keyof AppConfig, string> = {
-            geminiApiKey: 'GEMINI_API_KEY',
-            googleSheetId: 'GOOGLE_SHEET_ID',
-            googleSheetIdJobs: 'GOOGLE_SHEET_ID',
-            googleDriveFolderId: 'GOOGLE_DRIVE_FOLDER_ID',
-            googleDriveFolderIdJobs: 'GOOGLE_DRIVE_FOLDER_ID',
-            googleDocTemplateId: 'GOOGLE_DOC_TEMPLATE_ID',
-            serviceAccountJson: 'GOOGLE_APPLICATION_CREDENTIALS_JSON',
-            systemPassword: 'SYSTEM_PASSWORD',
-            users: 'SYSTEM_USERS',
-            googleAppsScriptUrl: 'GOOGLE_SCRIPT_URL',
-            groqApiKey: 'GROQ_API_KEY'
-        };
-
-        const envValue = process.env[envMap[key]];
-
-        // Special handling for array types from Env
-        if (key === 'users' && envValue) {
-            try {
-                return JSON.parse(envValue);
-            } catch (e) {
-                return envValue.split(',');
-            }
-        }
-
-        if (envValue === "undefined" || envValue === "null") return null;
-        return envValue;
-    }
+    get: getConfigValue,
 };

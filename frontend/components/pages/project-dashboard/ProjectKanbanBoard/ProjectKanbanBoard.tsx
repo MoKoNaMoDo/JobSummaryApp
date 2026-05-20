@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import JobCard from "@/components/JobCard/JobCard";
-import type { Job } from "@/components/JobCard/JobCard";
+import JobCard from "@/components/features/JobCard/JobCard";
+import type { Job } from "@/components/features/JobCard/JobCard";
 
 type GroupBy = "Status" | "Category" | "Assignee";
 

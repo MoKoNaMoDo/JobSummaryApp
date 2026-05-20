@@ -1,6 +1,5 @@
-import { getSheetsClient, getDriveClient, getDocsClient } from '../config/google';
+import { getSheetsClient, getDriveClient } from '../config/google';
 import { ConfigService } from './configService';
-import THBText from 'thai-baht-text';
 import axios from 'axios';
 
 export class GoogleService {
@@ -40,7 +39,6 @@ export class GoogleService {
             }
 
             const drive = getDriveClient();
-            const docs = getDocsClient();
 
             const newFileResponse = await drive.files.copy({
                 fileId: templateId,
@@ -97,8 +95,8 @@ export class GoogleService {
 
             throw new Error('No Upload Method Configured (Drive Folder ID or Proxy URL)');
 
-        } catch (error: any) {
-            console.error('Error uploading via Proxy:', error.message);
+        } catch (error: unknown) {
+            console.error('Error uploading via Proxy:', error instanceof Error ? error.message : error);
             return `UPLOAD_FAILED`;
         }
     }
@@ -374,8 +372,8 @@ export class GoogleService {
                 range: `${tabName}!A:Z`,
             });
             return response.data.values || [];
-        } catch (error: any) {
-            if (error.code === 400) return [];
+        } catch (error: unknown) {
+            if ((error as { code?: number }).code === 400) return [];
             console.error(`Error reading tab ${tabName}:`, error);
             return [];
         }

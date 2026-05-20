@@ -6,12 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { jobService } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import CompleteWorkLogDialog from "@/components/CompleteWorkLogDialog/CompleteWorkLogDialog";
-import DeleteJobDialog from "@/components/DeleteJobDialog/DeleteJobDialog";
-import EditJobDialog from "@/components/EditJobDialog/EditJobDialog";
-import ViewJobDialog from "@/components/ViewJobDialog/ViewJobDialog";
-import type { Job } from "@/components/JobCard/JobCard";
-import { useLanguage } from "@/components/LanguageProvider/LanguageProvider";
+import CompleteWorkLogDialog from "@/components/dialogs/CompleteWorkLogDialog/CompleteWorkLogDialog";
+import DeleteJobDialog from "@/components/dialogs/DeleteJobDialog/DeleteJobDialog";
+import EditJobDialog from "@/components/dialogs/EditJobDialog/EditJobDialog";
+import ViewJobDialog from "@/components/dialogs/ViewJobDialog/ViewJobDialog";
+import type { Job } from "@/components/features/JobCard/JobCard";
+import { useLanguage } from "@/components/features/LanguageProvider/LanguageProvider";
 import ProjectDashboardHeader from "@/components/pages/project-dashboard/ProjectDashboardHeader/ProjectDashboardHeader";
 import ProjectDashboardMetrics from "@/components/pages/project-dashboard/ProjectDashboardMetrics/ProjectDashboardMetrics";
 import ProjectDashboardToolbar from "@/components/pages/project-dashboard/ProjectDashboardToolbar/ProjectDashboardToolbar";
@@ -71,6 +71,8 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
       }
     };
     fetchData();
+  // slug comes from route params and doesn't change for the lifetime of this page
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [timeFilter, setTimeFilter] = useState<"Today" | "All">("All");

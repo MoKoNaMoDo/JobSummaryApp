@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import CreateProjectDialog from "@/components/CreateProjectDialog/CreateProjectDialog";
-import { useLanguage } from "@/components/LanguageProvider/LanguageProvider";
+import CreateProjectDialog from "@/components/dialogs/CreateProjectDialog/CreateProjectDialog";
+import { useLanguage } from "@/components/features/LanguageProvider/LanguageProvider";
 import ProjectsGrid from "@/components/pages/projects-hub/ProjectsGrid/ProjectsGrid";
 import ProjectsHubHeader from "@/components/pages/projects-hub/ProjectsHubHeader/ProjectsHubHeader";
 import ProjectsOverviewStats from "@/components/pages/projects-hub/ProjectsOverviewStats/ProjectsOverviewStats";
