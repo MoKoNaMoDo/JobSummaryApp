@@ -15,7 +15,19 @@ const SCOPES = [
     'https://www.googleapis.com/auth/documents',
 ];
 const getAuth = () => {
-    // 1. Try ConfigService (Dynamic JSON Content)
+    // 1. Try GOOGLE_SERVICE_ACCOUNT_JSON env (base64) — for cloud deployments
+    const b64 = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    if (b64) {
+        try {
+            const json = Buffer.from(b64, 'base64').toString('utf-8');
+            const credentials = JSON.parse(json);
+            return new googleapis_1.google.auth.GoogleAuth({ credentials, scopes: SCOPES });
+        }
+        catch (e) {
+            console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', e);
+        }
+    }
+    // 2. Try ConfigService (Dynamic JSON Content)
     const jsonContent = configService_1.ConfigService.get('serviceAccountJson');
     if (jsonContent) {
         try {
@@ -29,8 +41,7 @@ const getAuth = () => {
             console.error("Invalid Service Account JSON in config", e);
         }
     }
-    // 2. Fallback to Environment Variable or Default File Path
-    // 2. Fallback to Environment Variable
+    // 3. Fallback to GOOGLE_APPLICATION_CREDENTIALS file path (local dev only)
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
         return new googleapis_1.google.auth.GoogleAuth({
             keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,

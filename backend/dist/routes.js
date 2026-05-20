@@ -28,4 +28,14 @@ router.post('/login', configController_1.login);
 // Route: Jobs (New)
 router.post('/jobs', upload.single('image'), jobController_1.submitJob);
 router.get('/jobs', jobController_1.getJobs);
+router.patch('/jobs/status', jobController_1.updateJobStatus);
+router.patch('/jobs', jobController_1.updateJob);
+router.delete('/jobs', jobController_1.deleteJob);
+router.post('/ai/refine', jobController_1.refineJobText);
+// Route: Projects
+const projectController_1 = require("./controllers/projectController");
+router.get('/projects', projectController_1.getProjects);
+router.post('/projects', projectController_1.createProject);
+router.patch('/projects/:id', projectController_1.updateProject);
+router.delete('/projects/:id', projectController_1.deleteProject);
 exports.default = router;

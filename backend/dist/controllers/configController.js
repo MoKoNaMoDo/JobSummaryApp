@@ -49,7 +49,7 @@ const updateConfig = async (req, res) => {
                 ? newConfig.serviceAccountJson
                 : currentConfig.serviceAccountJson,
         };
-        const success = configService_1.ConfigService.saveConfig(mergedConfig);
+        const success = await configService_1.ConfigService.saveConfig(mergedConfig);
         if (success) {
             res.json({ status: 'success', message: 'Configuration updated successfully' });
         }
