@@ -46,7 +46,14 @@ const STATUS_COLORS: Record<string, string> = {
 function jobToEvent(job: Job): CalendarEvent {
     const [y, m, d] = job.date.split("-").map(Number);
     const start = new Date(y, m - 1, d);
-    const end = new Date(y, m - 1, d);
+    let end = new Date(y, m - 1, d);
+
+    if (job.completedDate && job.status === "Completed" && job.completedDate > job.date) {
+        const [ey, em, ed] = job.completedDate.split("-").map(Number);
+        // +1 day because react-big-calendar allDay end is exclusive
+        end = new Date(ey, em - 1, ed + 1);
+    }
+
     return {
         id: `${job.id}-${job.sheetName}`,
         title: job.taskName || job.category || "งาน",

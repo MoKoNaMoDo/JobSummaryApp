@@ -3,11 +3,10 @@
 import { use } from "react";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, Languages } from "lucide-react";
 import { toast } from "sonner";
 import { jobService } from "@/lib/api";
 import AddJobEntryCard from "@/components/pages/add-job/AddJobEntryCard/AddJobEntryCard";
-import AddJobHeader from "@/components/pages/add-job/AddJobHeader/AddJobHeader";
 import AddJobSkeleton from "@/components/pages/add-job/AddJobSkeleton/AddJobSkeleton";
 import AddJobSubmitBar from "@/components/pages/add-job/AddJobSubmitBar/AddJobSubmitBar";
 import { useLanguage } from "@/components/features/LanguageProvider/LanguageProvider";
@@ -187,7 +186,18 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
 
     return (
         <div className="max-w-2xl mx-auto space-y-6 pb-24">
-            <AddJobHeader t={t} aiLang={aiLang} onToggleLang={toggleLang} />
+            <div className="flex justify-end">
+                <button
+                    onClick={toggleLang}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all"
+                    style={aiLang === "th"
+                        ? { background: "rgba(99,102,241,0.12)", borderColor: "rgba(99,102,241,0.3)", color: "#a5b4fc" }
+                        : { background: "rgba(16,185,129,0.12)", borderColor: "rgba(16,185,129,0.3)", color: "#6ee7b7" }}
+                >
+                    <Languages className="w-3 h-3" />
+                    AI: {aiLang === "th" ? "ภาษาไทย" : "English"}
+                </button>
+            </div>
 
             <AnimatePresence mode="popLayout">
                 {entries.map((entry, index) => (

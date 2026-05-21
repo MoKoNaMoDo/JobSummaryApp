@@ -140,15 +140,15 @@ export class GoogleService {
 
                 await sheets.spreadsheets.values.update({
                     spreadsheetId,
-                    range: `${sheetName}!A1:H1`,
+                    range: `${sheetName}!A1:I1`,
                     valueInputOption,
                     requestBody: {
-                        values: [['วันที่', 'ชื่องาน', 'ผู้รับมอบหมาย', 'สถานะ', 'รายละเอียด', 'ค่าใช้จ่าย', 'รูปภาพ', 'อัปเดตล่าสุด']]
+                        values: [['วันที่', 'ชื่องาน', 'ผู้รับมอบหมาย', 'สถานะ', 'รายละเอียด', 'ค่าใช้จ่าย', 'รูปภาพ', 'อัปเดตล่าสุด', 'วันที่เสร็จ']]
                     }
                 });
             }
 
-            const range = `${sheetName}!A:H`;
+            const range = `${sheetName}!A:I`;
             const values = [[
                 data.date,
                 data.taskName,
@@ -157,7 +157,8 @@ export class GoogleService {
                 data.description,
                 data.cost || 0,
                 data.imageUrl,
-                new Date().toLocaleString('th-TH')
+                new Date().toLocaleString('th-TH'),
+                '', // completedDate — empty on creation
             ]];
 
             const response = await sheets.spreadsheets.values.append({
@@ -195,7 +196,7 @@ export class GoogleService {
 
             const sheets = getSheetsClient();
 
-            const range = `${sheetName}!A:H`;
+            const range = `${sheetName}!A:I`;
 
             const response = await sheets.spreadsheets.values.get({
                 spreadsheetId,
@@ -214,7 +215,8 @@ export class GoogleService {
                 description: row[4] || '',
                 cost: parseFloat(row[5]?.replace(/,/g, '') || '0'),
                 imageUrl: row[6] || '',
-                lastUpdated: row[7] || ''
+                lastUpdated: row[7] || '',
+                completedDate: row[8] || '',
             })).reverse();
         } catch (error) {
             console.error('Error fetching from Sheets:', error);
@@ -231,20 +233,18 @@ export class GoogleService {
             if (!spreadsheetId) throw new Error("Google Sheet ID not configured");
 
             const sheets = getSheetsClient();
-            const range = `${sheetName}!D${rowIndex}`;
+            const today = new Date().toISOString().split('T')[0];
 
-            await sheets.spreadsheets.values.update({
+            await sheets.spreadsheets.values.batchUpdate({
                 spreadsheetId,
-                range,
-                valueInputOption: 'USER_ENTERED',
-                requestBody: { values: [[status]] }
-            });
-
-            await sheets.spreadsheets.values.update({
-                spreadsheetId,
-                range: `${sheetName}!H${rowIndex}`,
-                valueInputOption: 'USER_ENTERED',
-                requestBody: { values: [[new Date().toLocaleString('th-TH')]] }
+                requestBody: {
+                    valueInputOption: 'USER_ENTERED',
+                    data: [
+                        { range: `${sheetName}!D${rowIndex}`, values: [[status]] },
+                        { range: `${sheetName}!H${rowIndex}`, values: [[new Date().toLocaleString('th-TH')]] },
+                        { range: `${sheetName}!I${rowIndex}`, values: [[status === 'Completed' ? today : '']] },
+                    ],
+                },
             });
 
             return true;
@@ -261,6 +261,7 @@ export class GoogleService {
         status: string;
         description: string;
         cost: number;
+        completedDate?: string;
     }, prefix: string = "JobSummary") {
         try {
             const spreadsheetId = prefix === "Jobs"
@@ -270,30 +271,22 @@ export class GoogleService {
             if (!spreadsheetId) throw new Error("Google Sheet ID not configured");
 
             const sheets = getSheetsClient();
+            const today = new Date().toISOString().split('T')[0];
+            const completedDate = data.completedDate ?? (data.status === 'Completed' ? today : '');
 
-            const range = `${sheetName}!A${rowIndex}:F${rowIndex}`;
-
-            const values = [[
-                data.date,
-                data.taskName,
-                data.assignee,
-                data.status,
-                data.description,
-                data.cost
-            ]];
-
-            await sheets.spreadsheets.values.update({
+            await sheets.spreadsheets.values.batchUpdate({
                 spreadsheetId,
-                range,
-                valueInputOption: 'USER_ENTERED',
-                requestBody: { values }
-            });
-
-            await sheets.spreadsheets.values.update({
-                spreadsheetId,
-                range: `${sheetName}!H${rowIndex}`,
-                valueInputOption: 'USER_ENTERED',
-                requestBody: { values: [[new Date().toLocaleString('th-TH')]] }
+                requestBody: {
+                    valueInputOption: 'USER_ENTERED',
+                    data: [
+                        {
+                            range: `${sheetName}!A${rowIndex}:F${rowIndex}`,
+                            values: [[data.date, data.taskName, data.assignee, data.status, data.description, data.cost]],
+                        },
+                        { range: `${sheetName}!H${rowIndex}`, values: [[new Date().toLocaleString('th-TH')]] },
+                        { range: `${sheetName}!I${rowIndex}`, values: [[completedDate]] },
+                    ],
+                },
             });
 
             return true;

@@ -30,44 +30,33 @@ const PROJECT_COLORS = [
 
 export const ProjectService = {
     async getAll(): Promise<Project[]> {
-        try {
-            const spreadsheetId = ConfigService.get('googleSheetIdJobs');
-            if (!spreadsheetId) return [];
+        const spreadsheetId = ConfigService.get('googleSheetIdJobs');
+        if (!spreadsheetId) throw new Error("Google Sheet ID is not configured.");
 
-            const rows = await GoogleService.readTab(spreadsheetId, TAB_NAME);
-            if (rows.length < 2) return []; // Header only or empty
+        const rows = await GoogleService.readTab(spreadsheetId, TAB_NAME);
+        if (rows.length < 2) return [];
 
-            // First row is header: id, name, slug, createdAt, color
-            return rows.slice(1).map(row => ({
-                id: row[0],
-                name: row[1],
-                slug: row[2],
-                createdAt: row[3],
-                color: row[4]
-            }));
-        } catch (e) {
-            console.error("Error reading projects from Sheets:", e);
-            return [];
-        }
+        return rows.slice(1).map(row => ({
+            id: row[0],
+            name: row[1],
+            slug: row[2],
+            createdAt: row[3],
+            color: row[4]
+        }));
     },
 
     async save(projects: Project[]): Promise<boolean> {
-        try {
-            const spreadsheetId = ConfigService.get('googleSheetIdJobs');
-            if (!spreadsheetId) return false;
+        const spreadsheetId = ConfigService.get('googleSheetIdJobs');
+        if (!spreadsheetId) throw new Error("Google Sheet ID is not configured. Please check your settings.");
 
-            const header = ['id', 'name', 'slug', 'createdAt', 'color'];
-            const rows = [
-                header,
-                ...projects.map(p => [p.id, p.name, p.slug, p.createdAt, p.color])
-            ];
+        const header = ['id', 'name', 'slug', 'createdAt', 'color'];
+        const rows = [
+            header,
+            ...projects.map(p => [p.id, p.name, p.slug, p.createdAt, p.color])
+        ];
 
-            await GoogleService.writeTab(spreadsheetId, TAB_NAME, rows);
-            return true;
-        } catch (e) {
-            console.error("Error saving projects to Sheets:", e);
-            return false;
-        }
+        await GoogleService.writeTab(spreadsheetId, TAB_NAME, rows);
+        return true;
     },
 
     async create(name: string, color?: string): Promise<Project> {

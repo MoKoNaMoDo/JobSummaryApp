@@ -20,6 +20,7 @@ interface Job {
     amount?: number;
     slipUrl?: string;
     sheetName?: string;
+    completedDate?: string;
 }
 
 interface JobCardProps {

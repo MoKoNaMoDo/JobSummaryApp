@@ -23,19 +23,14 @@ function getConfigValue(key: 'users'): string[] | undefined;
 function getConfigValue(key: Exclude<keyof AppConfig, 'users'>): string | null | undefined;
 function getConfigValue(key: keyof AppConfig): string | string[] | null | undefined;
 function getConfigValue(key: keyof AppConfig): string | string[] | null | undefined {
-    if (key === 'geminiApiKey' && process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
-    if (key === 'googleAppsScriptUrl') return configCache[key] || process.env.GOOGLE_SCRIPT_URL || process.env.GOOGLE_APPS_SCRIPT_URL;
-    if (key === 'groqApiKey' && process.env.GROQ_API_KEY) return process.env.GROQ_API_KEY;
-    if (key === 'googleSheetIdJobs') return configCache[key] || process.env.GOOGLE_SHEET_ID_JOBS || process.env.GOOGLE_SHEET_ID;
-    if (key === 'googleDriveFolderIdJobs') return configCache[key] || process.env.GOOGLE_DRIVE_FOLDER_ID_JOBS || process.env.GOOGLE_DRIVE_FOLDER_ID;
-    if (configCache[key]) return configCache[key];
-
+    // Priority: configCache (Settings page / Sheets) → env vars (.env.local)
+    // This lets users override keys from the Settings UI without touching .env files.
     const envMap: Record<keyof AppConfig, string> = {
         geminiApiKey: 'GEMINI_API_KEY',
         googleSheetId: 'GOOGLE_SHEET_ID',
-        googleSheetIdJobs: 'GOOGLE_SHEET_ID',
+        googleSheetIdJobs: 'GOOGLE_SHEET_ID_JOBS',
         googleDriveFolderId: 'GOOGLE_DRIVE_FOLDER_ID',
-        googleDriveFolderIdJobs: 'GOOGLE_DRIVE_FOLDER_ID',
+        googleDriveFolderIdJobs: 'GOOGLE_DRIVE_FOLDER_ID_JOBS',
         googleDocTemplateId: 'GOOGLE_DOC_TEMPLATE_ID',
         serviceAccountJson: 'GOOGLE_APPLICATION_CREDENTIALS_JSON',
         systemPassword: 'SYSTEM_PASSWORD',
@@ -44,7 +39,18 @@ function getConfigValue(key: keyof AppConfig): string | string[] | null | undefi
         groqApiKey: 'GROQ_API_KEY',
     };
 
-    const envValue = process.env[envMap[key]];
+    // 1. configCache (from Settings page saved to Sheets, or loaded at startup)
+    if (configCache[key] !== undefined && configCache[key] !== null && configCache[key] !== '') {
+        return configCache[key];
+    }
+
+    // 2. env var fallback
+    const envValue = process.env[envMap[key]]
+        // Extra aliases for common naming variations
+        ?? (key === 'googleAppsScriptUrl' ? (process.env.GOOGLE_APPS_SCRIPT_URL ?? process.env.GOOGLE_SCRIPT_URL) : undefined)
+        ?? (key === 'googleSheetIdJobs' ? process.env.GOOGLE_SHEET_ID : undefined)
+        ?? (key === 'googleDriveFolderIdJobs' ? process.env.GOOGLE_DRIVE_FOLDER_ID : undefined);
+
     if (key === 'users' && envValue) {
         try { return JSON.parse(envValue); } catch { return envValue.split(','); }
     }

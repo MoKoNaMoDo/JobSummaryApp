@@ -90,7 +90,23 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                     <div>{children}</div>
                 </div>
             ) : (
-                children
+                <div className="space-y-5">
+                    <header className="flex items-center gap-3">
+                        <Link href={`/projects/${slug}`}>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-xl text-slate-600 hover:text-white hover:bg-white/[0.06] h-9 w-9 shrink-0"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                            </Button>
+                        </Link>
+                        <h1 className="text-xl font-semibold tracking-tight text-white/90">
+                            {formatProjectName(slug)}
+                        </h1>
+                    </header>
+                    {children}
+                </div>
             )}
         </div>
     );
