@@ -8,11 +8,12 @@ export const jobService = {
         return response.data;
     },
 
-    getJobs: async (projectSlug?: string, month?: string, year?: string) => {
+    getJobs: async (projectSlug?: string, month?: string, year?: string, includeOngoing?: boolean) => {
         const params: Record<string, string> = {};
         if (projectSlug) params.projectSlug = projectSlug;
         if (month) params.month = month;
         if (year) params.year = year;
+        if (includeOngoing) params.includeOngoing = 'true';
         const response = await http.get("/jobs", { params });
         return response.data;
     },

@@ -69,34 +69,42 @@ export class GoogleService {
 
             const proxyUrl = ConfigService.get('googleAppsScriptUrl');
 
-            if (folderId && proxyUrl) {
-                const base64Data = file.buffer.toString('base64');
-                const fileName = `${date || new Date().toISOString().split('T')[0]}_${contextName || 'Job'}_${Date.now()}.jpg`;
+            console.log(`[uploadSlip] folderId=${folderId ? '✅ SET' : '❌ MISSING'} proxyUrl=${proxyUrl ? '✅ SET' : '❌ MISSING'}`);
 
-                const payload = {
-                    base64: base64Data,
-                    fileName: fileName,
-                    mimeType: file.mimetype,
-                    folderId: folderId
-                };
-
-                const response = await axios.post(proxyUrl, payload, {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.data && response.data.status === 'success') {
-                    return response.data.url;
-                } else {
-                    throw new Error(response.data?.message || 'Proxy returned an error');
-                }
+            if (!folderId) {
+                throw new Error('Drive Folder ID ไม่ได้ตั้งค่า — ใส่ใน Settings → Google Drive Folder ID (Jobs)');
+            }
+            if (!proxyUrl) {
+                throw new Error('Apps Script URL ไม่ได้ตั้งค่า — ใส่ใน Settings → Google Apps Script URL');
             }
 
-            throw new Error('No Upload Method Configured (Drive Folder ID or Proxy URL)');
+            const base64Data = file.buffer.toString('base64');
+            const fileName = `${date || new Date().toISOString().split('T')[0]}_${contextName || 'Job'}_${Date.now()}.jpg`;
+
+            const payload = {
+                base64: base64Data,
+                fileName: fileName,
+                mimeType: file.mimetype,
+                folderId: folderId
+            };
+
+            console.log(`[uploadSlip] Sending to proxy: ${(proxyUrl as string).substring(0, 60)}...`);
+            const response = await axios.post(proxyUrl as string, payload, {
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 30000,
+            });
+
+            console.log(`[uploadSlip] Proxy response:`, JSON.stringify(response.data).substring(0, 200));
+
+            if (response.data && response.data.status === 'success') {
+                return response.data.url;
+            } else {
+                throw new Error(response.data?.message || `Proxy error: ${JSON.stringify(response.data)}`);
+            }
 
         } catch (error: unknown) {
-            console.error('Error uploading via Proxy:', error instanceof Error ? error.message : error);
+            const msg = error instanceof Error ? error.message : String(error);
+            console.error('[uploadSlip] FAILED:', msg);
             return `UPLOAD_FAILED`;
         }
     }
@@ -355,6 +363,160 @@ export class GoogleService {
         const sheet = metadata.data.sheets?.find(s => s.properties?.title === sheetName);
         if (!sheet || !sheet.properties?.sheetId) throw new Error('Sheet not found');
         return sheet.properties.sheetId;
+    }
+
+    // ── Stats: all-time jobs across all month tabs for a project ──────────────
+    static async getAllJobsForProject(projectSlug: string) {
+        const spreadsheetId = this.getJobSpreadsheetId();
+        const sheets = getSheetsClient();
+
+        const metadata = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheetNames = (metadata.data.sheets || [])
+            .map(s => s.properties?.title || '')
+            .filter(name => name.startsWith(`${projectSlug}_`) && /\d{2}-\d{4}$/.test(name));
+
+        if (sheetNames.length === 0) return [];
+
+        const all = await Promise.all(sheetNames.map(async (sheetName) => {
+            try {
+                const res = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${sheetName}!A:I` });
+                const rows = res.data.values || [];
+                return rows.slice(1).map((row, i) => ({
+                    id: i + 2,
+                    sheetName,
+                    date: row[0] || '',
+                    taskName: row[1] || 'Untitled Task',
+                    assignee: row[2] || 'Unassigned',
+                    status: row[3] || 'Pending',
+                    description: row[4] || '',
+                    cost: parseFloat(row[5]?.replace(/,/g, '') || '0'),
+                    imageUrl: row[6] || '',
+                    completedDate: row[8] || '',
+                }));
+            } catch { return []; }
+        }));
+
+        return all.flat();
+    }
+
+    // ── Calendar: non-completed jobs from previous months ────────────────────
+    static async getOngoingJobsFromPreviousMonths(
+        projectSlug: string,
+        currentMonth: string,
+        currentYear: string,
+        lookback = 3
+    ) {
+        const spreadsheetId = this.getJobSpreadsheetId();
+        const sheets = getSheetsClient();
+
+        const sheetNames: string[] = [];
+        let m = parseInt(currentMonth);
+        let y = parseInt(currentYear);
+        for (let i = 0; i < lookback; i++) {
+            m--; if (m === 0) { m = 12; y--; }
+            sheetNames.push(`${projectSlug}_${String(m).padStart(2, '0')}-${y}`);
+        }
+
+        const results = await Promise.all(sheetNames.map(async (sheetName) => {
+            try {
+                const res = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${sheetName}!A:I` });
+                const rows = res.data.values || [];
+                return rows.slice(1)
+                    .map((row, i) => ({
+                        id: i + 2,
+                        sheetName,
+                        date: row[0] || '',
+                        taskName: row[1] || 'Untitled Task',
+                        assignee: row[2] || 'Unassigned',
+                        status: row[3] || 'Pending',
+                        description: row[4] || '',
+                        cost: parseFloat(row[5]?.replace(/,/g, '') || '0'),
+                        imageUrl: row[6] || '',
+                        completedDate: row[8] || '',
+                    }))
+                    .filter(job => job.status !== 'Completed');
+            } catch { return []; }
+        }));
+
+        return results.flat();
+    }
+
+    // ── Drag-and-drop: move a job row to a different month tab ────────────────
+    static async moveJobToNewMonth(oldSheetName: string, rowIndex: number, newDate: string): Promise<boolean> {
+        const spreadsheetId = this.getJobSpreadsheetId();
+        const sheets = getSheetsClient();
+
+        // 1. Read current row
+        const readRes = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${oldSheetName}!A${rowIndex}:I${rowIndex}`,
+        });
+        const row = readRes.data.values?.[0];
+        if (!row) throw new Error('Row not found');
+
+        // 2. Build new row with updated date
+        const newRow = [
+            newDate,
+            row[1] || '',
+            row[2] || '',
+            row[3] || '',
+            row[4] || '',
+            row[5] || '',
+            row[6] || '',
+            new Date().toLocaleString('th-TH'),
+            row[8] || '',
+        ];
+
+        // 3. Determine new sheet name
+        const dateObj = new Date(newDate);
+        const monthYear = `${String(dateObj.getMonth() + 1).padStart(2, '0')}-${dateObj.getFullYear()}`;
+        const slugMatch = oldSheetName.match(/^(.+)_\d{2}-\d{4}$/);
+        if (!slugMatch) throw new Error('Invalid sheet name format');
+        const newSheetName = `${slugMatch[1]}_${monthYear}`;
+
+        // 4. Ensure new sheet exists
+        const metadata = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheetExists = metadata.data.sheets?.some(s => s.properties?.title === newSheetName);
+        if (!sheetExists) {
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId,
+                requestBody: { requests: [{ addSheet: { properties: { title: newSheetName } } }] },
+            });
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `${newSheetName}!A1:I1`,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: [['วันที่', 'ชื่องาน', 'ผู้รับมอบหมาย', 'สถานะ', 'รายละเอียด', 'ค่าใช้จ่าย', 'รูปภาพ', 'อัปเดตล่าสุด', 'วันที่เสร็จ']] },
+            });
+        }
+
+        // 5. Append to new tab
+        await sheets.spreadsheets.values.append({
+            spreadsheetId,
+            range: `${newSheetName}!A:I`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [newRow] },
+        });
+
+        // 6. Delete row from old tab (no Drive file deletion)
+        const oldSheetId = await this.getSheetId(spreadsheetId, oldSheetName);
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: [{
+                    deleteDimension: {
+                        range: {
+                            sheetId: oldSheetId,
+                            dimension: 'ROWS',
+                            startIndex: rowIndex - 1,
+                            endIndex: rowIndex,
+                        },
+                    },
+                }],
+            },
+        });
+
+        return true;
     }
 
     static async readTab(spreadsheetId: string, tabName: string): Promise<string[][]> {

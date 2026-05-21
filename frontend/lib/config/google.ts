@@ -22,7 +22,7 @@ const getAuth = () => {
 
     // 2. Try ConfigService (Dynamic JSON stored in Sheets)
     const jsonContent = ConfigService.get('serviceAccountJson');
-    if (jsonContent) {
+    if (jsonContent && typeof jsonContent === 'string' && jsonContent.trim().startsWith('{')) {
         try {
             const credentials = JSON.parse(jsonContent);
             return new google.auth.GoogleAuth({ credentials, scopes: SCOPES });

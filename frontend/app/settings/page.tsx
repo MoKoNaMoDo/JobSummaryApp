@@ -17,6 +17,7 @@ export default function SettingsPage() {
     const { t, language, setLanguage } = useLanguage();
     const [config, setConfig] = useState({
         geminiApiKey: '',
+        groqApiKey: '',
         googleSheetId: '',
         googleSheetIdJobs: '',
         googleDriveFolderId: '',
@@ -28,6 +29,7 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [showApiKey, setShowApiKey] = useState(false);
+    const [showGroqKey, setShowGroqKey] = useState(false);
     const [showServiceAccount, setShowServiceAccount] = useState(false);
 
     useEffect(() => {
@@ -59,7 +61,12 @@ export default function SettingsPage() {
         setSaving(true);
         try {
             const usersArray = config.users.split(',').map(u => u.trim()).filter(u => u.length > 0);
-            await jobService.saveConfig({ ...config, users: usersArray });
+            // Skip '********' — means user didn't change the key, keep existing value
+            const payload: Record<string, unknown> = { ...config, users: usersArray };
+            if (payload.geminiApiKey === '********') delete payload.geminiApiKey;
+            if (payload.groqApiKey === '********') delete payload.groqApiKey;
+            if (payload.serviceAccountJson === '••••••••••••••••' || payload.serviceAccountJson === '********') delete payload.serviceAccountJson;
+            await jobService.saveConfig(payload);
             toast.success(t('settings.toastSaved'));
         } catch (error) {
             console.error("Failed to save config", error);
@@ -157,8 +164,12 @@ export default function SettingsPage() {
                             <p className="text-xs text-slate-400">{t('settings.aiConfigDesc')}</p>
                         </div>
                     </div>
+                    {/* Gemini API Key */}
                     <div className="space-y-1.5">
-                        <Label htmlFor="geminiApiKey" className="text-xs text-slate-400">Gemini API Key</Label>
+                        <Label htmlFor="geminiApiKey" className="text-xs text-slate-400">
+                            Gemini API Key
+                            <span className="ml-2 text-slate-600 font-normal">— วิเคราะห์รูปภาพ / งาน</span>
+                        </Label>
                         <div className="relative">
                             <Input
                                 id="geminiApiKey"
@@ -183,6 +194,44 @@ export default function SettingsPage() {
                                 {t('settings.secureNote')}
                             </div>
                         )}
+                    </div>
+
+                    {/* Groq API Key */}
+                    <div className="space-y-1.5">
+                        <Label htmlFor="groqApiKey" className="text-xs text-slate-400">
+                            Groq API Key
+                            <span className="ml-2 text-slate-600 font-normal">— AI Refine / ปรับแต่งข้อความ</span>
+                        </Label>
+                        <div className="relative">
+                            <Input
+                                id="groqApiKey"
+                                name="groqApiKey"
+                                type={showGroqKey ? "text" : "password"}
+                                value={config.groqApiKey}
+                                onChange={handleChange}
+                                placeholder={isMasked(config.groqApiKey) ? t('settings.alreadySet') : "gsk_..."}
+                                className="bg-slate-900/60 border-slate-600/50 text-white font-mono text-sm pr-10 rounded-xl placeholder:text-slate-600"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowGroqKey(!showGroqKey)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                            >
+                                {showGroqKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
+                        {isMasked(config.groqApiKey) && (
+                            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400/70">
+                                <Shield className="w-3 h-3" />
+                                {t('settings.secureNote')}
+                            </div>
+                        )}
+                        <p className="text-[11px] text-slate-600">
+                            รับ key ฟรีได้ที่{' '}
+                            <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline">
+                                console.groq.com/keys
+                            </a>
+                        </p>
                     </div>
                 </Card>
 

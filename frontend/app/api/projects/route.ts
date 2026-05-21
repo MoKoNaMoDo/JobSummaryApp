@@ -12,7 +12,7 @@ export async function GET() {
         const enriched = await Promise.all(
             projects.map(async (p) => {
                 try {
-                    const jobs = await GoogleService.getReimbursements(undefined, undefined, 'Jobs', p.slug) as JobEntry[];
+                    const jobs = await GoogleService.getAllJobsForProject(p.slug) as JobEntry[];
                     return {
                         ...p,
                         stats: {

@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Languages } from "lucide-react";
 import { toast } from "sonner";
@@ -15,7 +16,12 @@ import { createEmptyJobEntry, todayISO, type JobEntry } from "@/lib/jobs/jobEntr
 export default function AddJobPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = use(params);
     const { t } = useLanguage();
-    const [entries, setEntries] = useState<JobEntry[]>([createEmptyJobEntry(true)]);
+    const searchParams = useSearchParams();
+    const dateFromCalendar = searchParams.get("date");
+    const [entries, setEntries] = useState<JobEntry[]>([{
+        ...createEmptyJobEntry(true),
+        ...(dateFromCalendar ? { workDate: dateFromCalendar } : {}),
+    }]);
     const [users, setUsers] = useState<string[]>([]);
     const [isSubmittingAll, setIsSubmittingAll] = useState(false);
     const [refiningIds, setRefiningIds] = useState<Record<string, boolean>>({});
@@ -141,8 +147,12 @@ export default function AddJobPage({ params }: { params: Promise<{ slug: string 
             if (entry.file) formData.append("image", entry.file);
             formData.append("projectSlug", slug);
 
-            await jobService.submitJob(formData);
+            const result = await jobService.submitJob(formData);
             updateEntry(entry.id, { isSubmitting: false, isSubmitted: true });
+            // Warn if image was attached but upload failed
+            if (entry.file && result?.imageUploaded === false) {
+                toast.warning('บันทึกงานแล้ว แต่อัปโหลดรูปไม่สำเร็จ — ตรวจสอบ Google Apps Script URL ในหน้าตั้งค่า', { duration: 6000 });
+            }
             return true;
         } catch (error: unknown) {
             updateEntry(entry.id, { isSubmitting: false });

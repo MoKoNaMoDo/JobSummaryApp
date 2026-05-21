@@ -88,7 +88,7 @@ export default function CalendarPage({
             setLoading(true);
             try {
                 const [jobsData, configData] = await Promise.all([
-                    jobService.getJobs(slug, month, year),
+                    jobService.getJobs(slug, month, year, true), // includeOngoing from prev months
                     jobService.getConfig(),
                 ]);
                 setJobs(Array.isArray(jobsData) ? jobsData : []);
@@ -148,19 +148,32 @@ export default function CalendarPage({
         const job = event.resource;
         if (newDate === job.date) return;
 
+        const newMonth = format(new Date(start), "MM");
+        const currentMonth = String(currentDate.getMonth() + 1).padStart(2, "0");
+        const crossMonth = newMonth !== currentMonth;
+
         try {
             await jobService.updateJob({
                 ...job,
                 date: newDate,
             } as unknown as Record<string, unknown>);
-            setJobs((prev) =>
-                prev.map((j) =>
-                    j.id === job.id && j.sheetName === job.sheetName
-                        ? { ...j, date: newDate }
-                        : j
-                )
-            );
-            toast.success("อัปเดตวันที่แล้ว");
+
+            if (crossMonth) {
+                // Row moved to a different tab — remove from current view
+                setJobs((prev) =>
+                    prev.filter((j) => !(j.id === job.id && j.sheetName === job.sheetName))
+                );
+                toast.success("ย้ายงานไปเดือนใหม่เรียบร้อย");
+            } else {
+                setJobs((prev) =>
+                    prev.map((j) =>
+                        j.id === job.id && j.sheetName === job.sheetName
+                            ? { ...j, date: newDate }
+                            : j
+                    )
+                );
+                toast.success("อัปเดตวันที่แล้ว");
+            }
         } catch {
             toast.error("อัปเดตวันที่ไม่สำเร็จ");
         }

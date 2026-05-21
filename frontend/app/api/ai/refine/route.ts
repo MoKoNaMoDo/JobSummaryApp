@@ -9,6 +9,12 @@ export async function POST(req: NextRequest) {
         const result = await GeminiService.refineText(text, mode, language);
         return NextResponse.json({ status: 'success', data: result });
     } catch (error: unknown) {
-        return NextResponse.json({ status: 'error', message: errMsg(error) }, { status: 500 });
+        const msg = errMsg(error);
+        console.error('[/api/ai/refine] Error:', msg);
+        // API key missing → 400 with actionable message
+        if (msg.includes('missing') || msg.includes('API Key')) {
+            return NextResponse.json({ status: 'error', message: 'Groq API Key ไม่ได้ตั้งค่า — กรุณา restart dev server หรือใส่ key ในหน้าตั้งค่า' }, { status: 400 });
+        }
+        return NextResponse.json({ status: 'error', message: msg }, { status: 500 });
     }
 }

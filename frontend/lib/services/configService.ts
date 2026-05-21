@@ -39,9 +39,19 @@ function getConfigValue(key: keyof AppConfig): string | string[] | null | undefi
         groqApiKey: 'GROQ_API_KEY',
     };
 
+    // Sentinel/placeholder values that should be treated as "not set"
+    const SENTINELS = new Set(['MISSING', 'PRESENT', 'undefined', 'null', '********', '••••••••••••••••']);
+
     // 1. configCache (from Settings page saved to Sheets, or loaded at startup)
-    if (configCache[key] !== undefined && configCache[key] !== null && configCache[key] !== '') {
-        return configCache[key];
+    const cachedVal = configCache[key];
+    if (cachedVal !== undefined && cachedVal !== null && cachedVal !== '') {
+        // Reject known sentinel strings so they fall through to env var fallback
+        if (typeof cachedVal === 'string' && SENTINELS.has(cachedVal.trim())) {
+            // Remove the bad value so it doesn't block env fallback on next call
+            delete configCache[key];
+        } else {
+            return cachedVal;
+        }
     }
 
     // 2. env var fallback
@@ -78,11 +88,16 @@ export const ConfigService = {
                 return;
             }
 
+            // Sentinel/placeholder values that should be treated as "not set"
+            const SENTINELS = new Set(['MISSING', 'PRESENT', 'undefined', 'null', '********', '••••••••••••••••']);
+
             // Mapped from Key-Value rows (skip header)
             const loadedConfig: Record<string, unknown> = {};
             rows.slice(1).forEach(row => {
                 const [key, value] = row;
-                if (key) {
+                if (key && value !== undefined && value !== null && value !== '') {
+                    // Skip sentinel placeholder values left over from old API versions
+                    if (typeof value === 'string' && SENTINELS.has(value.trim())) return;
                     try {
                         // Parse arrays or objects (like 'users')
                         loadedConfig[key] = (value?.startsWith('[') || value?.startsWith('{'))
@@ -112,13 +127,22 @@ export const ConfigService = {
             const spreadsheetId = process.env.GOOGLE_SHEET_ID_JOBS || process.env.GOOGLE_SHEET_ID;
             if (!spreadsheetId) return false;
 
+            // Never persist sentinel/placeholder values to Sheets
+            const SENTINELS = new Set(['MISSING', 'PRESENT', 'undefined', 'null', '********', '••••••••••••••••']);
+
             const header = ['key', 'value'];
             const rows = [
                 header,
-                ...Object.entries(configCache).map(([k, v]) => [
-                    k,
-                    typeof v === 'object' ? JSON.stringify(v) : String(v)
-                ])
+                ...Object.entries(configCache)
+                    .filter(([, v]) => {
+                        if (v === undefined || v === null || v === '') return false;
+                        if (typeof v === 'string' && SENTINELS.has(v.trim())) return false;
+                        return true;
+                    })
+                    .map(([k, v]) => [
+                        k,
+                        typeof v === 'object' ? JSON.stringify(v) : String(v)
+                    ])
             ];
 
             await GoogleService.writeTab(spreadsheetId, TAB_NAME, rows);

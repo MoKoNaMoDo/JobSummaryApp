@@ -5,18 +5,27 @@ import { ensureConfig, errMsg } from '@/lib/api-utils';
 export async function GET() {
     await ensureConfig();
     try {
-        const safeGet = (key: keyof AppConfig) => {
+        const get = (key: keyof AppConfig) => {
             const v = ConfigService.get(key);
-            return v === 'undefined' || v === 'null' || v == null ? null : v;
+            if (v === 'undefined' || v === 'null' || v == null) return '';
+            return v;
         };
+        const masked = (key: keyof AppConfig) => get(key) ? '********' : '';
 
         return NextResponse.json({
             status: 'success',
             data: {
-                geminiApiKey: safeGet('geminiApiKey') ? 'PRESENT' : 'MISSING',
-                groqApiKey: safeGet('groqApiKey') ? 'PRESENT' : 'MISSING',
-                serviceAccountJson: safeGet('serviceAccountJson') ? 'PRESENT' : 'MISSING',
-                users: safeGet('users') ?? [],
+                // Sensitive — return masked value so UI shows "already set"
+                geminiApiKey: masked('geminiApiKey'),
+                groqApiKey: masked('groqApiKey'),
+                serviceAccountJson: masked('serviceAccountJson'),
+                // Non-sensitive — return actual values for editing
+                googleSheetId: get('googleSheetId'),
+                googleSheetIdJobs: get('googleSheetIdJobs'),
+                googleDriveFolderId: get('googleDriveFolderId'),
+                googleDriveFolderIdJobs: get('googleDriveFolderIdJobs'),
+                googleAppsScriptUrl: get('googleAppsScriptUrl'),
+                users: get('users') || [],
             },
         });
     } catch (error: unknown) {
