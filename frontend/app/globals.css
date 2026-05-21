@@ -133,5 +133,140 @@
   }
   body {
     @apply bg-background text-foreground tracking-tight selection:bg-primary/30 selection:text-primary-foreground;
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% 0%, oklch(0.28 0.1 260 / 0.20) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 30% at 80% 80%, oklch(0.25 0.08 290 / 0.06) 0%, transparent 60%);
   }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: oklch(0.98 0 0 / 0.08); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: oklch(0.98 0 0 / 0.15); }
+}
+
+/* ─── react-big-calendar Dark Theme ────────────────────────── */
+.rbc-dark-wrapper .rbc-calendar {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  height: 100%;
+}
+.rbc-dark-wrapper .rbc-toolbar {
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.rbc-dark-wrapper .rbc-toolbar button {
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rbc-dark-wrapper .rbc-toolbar button:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+}
+.rbc-dark-wrapper .rbc-toolbar button.rbc-active {
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.35);
+}
+.rbc-dark-wrapper .rbc-toolbar-label {
+  font-weight: 600;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.rbc-dark-wrapper .rbc-month-view,
+.rbc-dark-wrapper .rbc-time-view,
+.rbc-dark-wrapper .rbc-agenda-view {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.01);
+}
+.rbc-dark-wrapper .rbc-header {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+  font-size: 11px;
+  padding: 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.rbc-dark-wrapper .rbc-header + .rbc-header {
+  border-left: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+.rbc-dark-wrapper .rbc-month-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+.rbc-dark-wrapper .rbc-day-bg {
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+.rbc-dark-wrapper .rbc-off-range-bg {
+  background: rgba(0, 0, 0, 0.12);
+}
+.rbc-dark-wrapper .rbc-today {
+  background: rgba(99, 102, 241, 0.07) !important;
+}
+.rbc-dark-wrapper .rbc-date-cell {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  padding: 4px 8px;
+  text-align: right;
+}
+.rbc-dark-wrapper .rbc-date-cell.rbc-now > a {
+  color: #a5b4fc;
+  font-weight: 600;
+}
+.rbc-dark-wrapper .rbc-date-cell.rbc-off-range > a {
+  color: rgba(255, 255, 255, 0.2);
+}
+.rbc-dark-wrapper .rbc-event {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.rbc-dark-wrapper .rbc-event:focus {
+  outline: none !important;
+}
+.rbc-dark-wrapper .rbc-show-more {
+  color: #a5b4fc;
+  font-size: 11px;
+  background: transparent;
+}
+/* Week / Day time view */
+.rbc-dark-wrapper .rbc-time-header-content {
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+}
+.rbc-dark-wrapper .rbc-time-content {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.rbc-dark-wrapper .rbc-time-slot {
+  border-top: 1px solid rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 11px;
+}
+.rbc-dark-wrapper .rbc-timeslot-group {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.rbc-dark-wrapper .rbc-time-view .rbc-row {
+  min-height: 24px;
+}
+.rbc-dark-wrapper .rbc-current-time-indicator {
+  background: rgba(99, 102, 241, 0.5);
+}
+/* Slot selection highlight */
+.rbc-dark-wrapper .rbc-slot-selecting {
+  cursor: cell;
+}
+.rbc-dark-wrapper .rbc-slot-selection {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px dashed rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+  font-size: 12px;
 }

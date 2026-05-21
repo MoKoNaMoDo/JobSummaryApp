@@ -12,7 +12,6 @@ import EditJobDialog from "@/components/dialogs/EditJobDialog/EditJobDialog";
 import ViewJobDialog from "@/components/dialogs/ViewJobDialog/ViewJobDialog";
 import type { Job } from "@/components/features/JobCard/JobCard";
 import { useLanguage } from "@/components/features/LanguageProvider/LanguageProvider";
-import ProjectDashboardHeader from "@/components/pages/project-dashboard/ProjectDashboardHeader/ProjectDashboardHeader";
 import ProjectDashboardMetrics from "@/components/pages/project-dashboard/ProjectDashboardMetrics/ProjectDashboardMetrics";
 import ProjectDashboardToolbar from "@/components/pages/project-dashboard/ProjectDashboardToolbar/ProjectDashboardToolbar";
 import ProjectKanbanBoard from "@/components/pages/project-dashboard/ProjectKanbanBoard/ProjectKanbanBoard";
@@ -98,7 +97,6 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
     return true;
   });
 
-  const totalCost = filteredJobs.reduce((acc, curr) => acc + (curr.cost || curr.amount || 0), 0);
   const completedCount = filteredJobs.filter(j => j.status === 'Completed').length;
   const totalCount = filteredJobs.length;
 
@@ -183,16 +181,7 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
 
   if (!mounted) {
     return (
-      <div className="space-y-6 pb-10">
-        <header className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-xl bg-white/5" />
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-48 bg-white/5" />
-              <Skeleton className="h-4 w-32 bg-white/5" />
-            </div>
-          </div>
-        </header>
+      <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => (
             <div key={i} className="space-y-3">
@@ -206,8 +195,7 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
   }
 
   return (
-    <div className="space-y-6 pb-10">
-      <ProjectDashboardHeader slug={slug} t={t} />
+    <div className="space-y-6">
       <ProjectDashboardToolbar
         searchQuery={searchQuery}
         timeFilter={timeFilter}
@@ -217,7 +205,7 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
         onTimeFilterChange={setTimeFilter}
         onGroupByChange={setGroupBy}
       />
-      <ProjectDashboardMetrics totalCount={totalCount} completedCount={completedCount} totalCost={totalCost} t={t} />
+      <ProjectDashboardMetrics totalCount={totalCount} completedCount={completedCount} t={t} />
       <ProjectKanbanBoard
         columns={dynamicColumns}
         loading={loading}

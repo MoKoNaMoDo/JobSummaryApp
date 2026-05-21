@@ -51,7 +51,6 @@ export default function ProjectsHub() {
   // Summary stats across all projects
   const totalJobs = projects.reduce((s, p) => s + (p.stats?.total || 0), 0);
   const totalCompleted = projects.reduce((s, p) => s + (p.stats?.completed || 0), 0);
-  const totalCost = projects.reduce((s, p) => s + (p.stats?.totalCost || 0), 0);
 
   if (!mounted) return (
     <div className="space-y-8 pb-10 opacity-0">
@@ -65,7 +64,7 @@ export default function ProjectsHub() {
   return (
     <div className="space-y-8 pb-10">
       <ProjectsHubHeader t={t} onCreate={() => setCreateOpen(true)} />
-      <ProjectsOverviewStats totalJobs={totalJobs} totalCompleted={totalCompleted} totalCost={totalCost} t={t} />
+      <ProjectsOverviewStats totalJobs={totalJobs} totalCompleted={totalCompleted} t={t} />
       <ProjectsGrid projects={projects} loading={loading} t={t} onCreate={() => setCreateOpen(true)} onDelete={handleDelete} />
 
       <CreateProjectDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreate} />

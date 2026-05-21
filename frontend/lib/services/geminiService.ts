@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { ConfigService } from "./configService";
 
 export class GeminiService {
@@ -118,7 +119,6 @@ export class GeminiService {
             const apiKey = ConfigService.get('groqApiKey');
             if (!apiKey) throw new Error("Groq API Key is missing. Please set GROQ_API_KEY in ENV or config.");
 
-            const { Groq } = await import('groq-sdk');
             const groq = new Groq({ apiKey });
 
             const isThai = language === 'th';
